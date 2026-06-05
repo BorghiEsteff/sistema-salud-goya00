@@ -1,0 +1,243 @@
+const bcrypt = require('bcryptjs');
+const db = require('../config/db');
+
+// --- ESPECIALIDADES ---
+async function getEspecialidades(req, res, next) {
+  try {
+    const result = await db.query('SELECT * FROM especialidades ORDER BY activo DESC, nombre ASC');
+    res.json(result.rows);
+  } catch (err) { next(err); }
+}
+
+async function createEspecialidad(req, res, next) {
+  try {
+    const { nombre, descripcion } = req.body;
+    if (!nombre) return res.status(400).json({ error: 'Nombre es requerido' });
+    const result = await db.query(
+      'INSERT INTO especialidades (nombre, descripcion) VALUES ($1, $2) RETURNING *',
+      [nombre, descripcion]
+    );
+    res.status(201).json(result.rows[0]);
+  } catch (err) { next(err); }
+}
+
+async function deleteEspecialidad(req, res, next) {
+  try {
+    const { id } = req.params;
+    // Baja lógica según regla #1
+    await db.query('UPDATE especialidades SET activo = FALSE WHERE id = $1', [id]);
+    await db.query(`INSERT INTO logs_auditoria (tabla_afectada, registro_id, accion, campo_modificado, valor_anterior, valor_nuevo, usuario_id) VALUES ('especialidades', $1, 'DELETE_LOGICO', 'activo', 'true', 'false', $2)`, [id, req.usuario.id]);
+    res.json({ message: 'Especialidad eliminada lógicamente' });
+  } catch (err) { next(err); }
+}
+
+// --- MÉDICOS ---
+async function getMedicos(req, res, next) {
+  try {
+    const result = await db.query(`
+      SELECT m.id, m.nombre, m.apellido, m.matricula, m.telefono, m.activo, e.nombre as especialidad, u.email
+      FROM medicos m
+      JOIN usuarios u ON m.usuario_id = u.id
+      LEFT JOIN especialidades e ON m.especialidad_id = e.id
+      ORDER BY m.activo DESC, m.apellido ASC
+    `);
+    res.json(result.rows);
+  } catch (err) { next(err); }
+}
+
+async function createMedico(req, res, next) {
+  const client = await db.connect();
+  try {
+    await client.query('BEGIN');
+    const { email, password, nombre, apellido, matricula, especialidad_id, telefono } = req.body;
+    
+    // 1. Crear usuario
+    const salt = await bcrypt.genSalt(10);
+    const hash = await bcrypt.hash(password, salt);
+    const userRes = await client.query(
+      "INSERT INTO usuarios (email, password_hash, rol) VALUES ($1, $2, 'medico') RETURNING id",
+      [email, hash]
+    );
+    const usuario_id = userRes.rows[0].id;
+
+    // 2. Crear perfil médico
+    const medRes = await client.query(
+      'INSERT INTO medicos (usuario_id, nombre, apellido, matricula, especialidad_id, telefono) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+      [usuario_id, nombre, apellido, matricula, especialidad_id, telefono]
+    );
+
+    // 3. Reactivar la especialidad si estaba inactiva
+    if (especialidad_id) {
+      await client.query('UPDATE especialidades SET activo = TRUE WHERE id = $1', [especialidad_id]);
+    }
+    
+    await client.query('COMMIT');
+    res.status(201).json(medRes.rows[0]);
+  } catch (err) {
+    await client.query('ROLLBACK');
+    next(err);
+  } finally {
+    client.release();
+  }
+}
+
+// --- SUSPENSIONES ---
+async function levantarSuspension(req, res, next) {
+  try {
+    const { id } = req.params; // ID de paciente
+    const result = await db.query(`
+      UPDATE pacientes
+      SET estado_cuenta = 'activo', inasistencias_recientes = 0, suspension_hasta = NULL
+      WHERE id = $1 RETURNING id, estado_cuenta
+    `, [id]);
+    
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Paciente no encontrado' });
+    
+    // Registrar auditoría de esta acción crítica
+    await db.query(`
+      INSERT INTO logs_auditoria (tabla_afectada, registro_id, accion, campo_modificado, valor_anterior, valor_nuevo, usuario_id)
+      VALUES ('pacientes', $1, 'UPDATE', 'estado_cuenta', 'suspendido', 'activo', $2)
+    `, [id, req.usuario.id]);
+
+    res.json(result.rows[0]);
+  } catch (err) { next(err); }
+}
+
+// --- AUDITORÍA ---
+async function getAuditoria(req, res, next) {
+  try {
+    const { fecha_desde, fecha_hasta } = req.query;
+    let query = `
+      SELECT l.*, u.email as admin_email,
+             CASE 
+               WHEN l.tabla_afectada = 'medicos' THEN (SELECT nombre || ' ' || apellido FROM medicos WHERE id::text = l.registro_id)
+               WHEN l.tabla_afectada = 'pacientes' THEN (SELECT nombre || ' ' || apellido FROM pacientes WHERE id::text = l.registro_id)
+               WHEN l.tabla_afectada = 'especialidades' THEN (SELECT nombre FROM especialidades WHERE id::text = l.registro_id)
+               ELSE NULL
+             END as nombre_afectado
+      FROM logs_auditoria l
+      LEFT JOIN usuarios u ON l.usuario_id = u.id
+      WHERE 1=1
+    `;
+    const params = [];
+    
+    if (fecha_desde) {
+      params.push(fecha_desde);
+      query += ` AND DATE(l.creado_en) >= $${params.length}`;
+    }
+    if (fecha_hasta) {
+      params.push(fecha_hasta);
+      query += ` AND DATE(l.creado_en) <= $${params.length}`;
+    }
+    
+    query += ` ORDER BY l.creado_en DESC LIMIT 100`;
+    
+    const result = await db.query(query, params);
+    res.json(result.rows);
+  } catch (err) { next(err); }
+}
+
+async function toggleMedicoStatus(req, res, next) {
+  try {
+    const { id } = req.params;
+    const { activo } = req.body;
+    const result = await db.query('UPDATE medicos SET activo = $1 WHERE id = $2 RETURNING *', [activo, id]);
+    const medico = result.rows[0];
+    await db.query(`INSERT INTO logs_auditoria (tabla_afectada, registro_id, accion, campo_modificado, valor_anterior, valor_nuevo, usuario_id) VALUES ('medicos', $1, 'UPDATE', 'activo', $2, $3, $4)`, [id, String(!activo), String(activo), req.usuario.id]);
+    if (medico && activo) {
+      // Reactivar especialidad si el medico vuelve a estar activo
+      await db.query('UPDATE especialidades SET activo = TRUE WHERE id = $1', [medico.especialidad_id]);
+    }
+    res.json(medico);
+  } catch(err) { next(err); }
+}
+
+async function togglePacienteStatus(req, res, next) {
+  try {
+    const { id } = req.params;
+    const { activo } = req.body;
+    const result = await db.query('UPDATE pacientes SET activo = $1 WHERE id = $2 RETURNING *', [activo, id]);
+    await db.query(`INSERT INTO logs_auditoria (tabla_afectada, registro_id, accion, campo_modificado, valor_anterior, valor_nuevo, usuario_id) VALUES ('pacientes', $1, 'UPDATE', 'activo', $2, $3, $4)`, [id, String(!activo), String(activo), req.usuario.id]);
+    res.json(result.rows[0]);
+  } catch(err) { next(err); }
+}
+
+async function deletePacienteFisico(req, res, next) {
+  const client = await db.connect();
+  try {
+    const { id } = req.params;
+    await client.query('BEGIN');
+    
+    // Primero, obtener el usuario_id asociado a este paciente
+    const pacRes = await client.query('SELECT usuario_id FROM pacientes WHERE id = $1', [id]);
+    if (pacRes.rowCount === 0) throw new Error('Paciente no encontrado');
+    const usuarioId = pacRes.rows[0].usuario_id;
+    
+    // Eliminar dependencias primero
+    await client.query('DELETE FROM archivos_adjuntos WHERE paciente_id = $1', [id]);
+    await client.query('DELETE FROM historia_clinica WHERE paciente_id = $1', [id]);
+    await client.query('DELETE FROM turnos WHERE paciente_id = $1', [id]);
+    
+    // Ahora eliminar el paciente
+    await client.query('DELETE FROM pacientes WHERE id = $1', [id]);
+    // Finalmente eliminar el usuario asociado
+    await client.query('DELETE FROM usuarios WHERE id = $1', [usuarioId]);
+    
+    // Auditoría
+    await client.query(`INSERT INTO logs_auditoria (tabla_afectada, registro_id, accion, campo_modificado, valor_nuevo, usuario_id) VALUES ('pacientes', $1, 'DELETE', 'registros', 'Paciente eliminado físicamente', $2)`, [id, req.usuario.id]);
+    
+    await client.query('COMMIT');
+    res.json({ message: 'Paciente eliminado' });
+  } catch(err) { 
+    await client.query('ROLLBACK');
+    next(err); 
+  } finally {
+    client.release();
+  }
+}
+
+async function limpiarEspecialidadesVacias(req, res, next) {
+  const client = await db.connect();
+  try {
+    await client.query('BEGIN');
+    
+    // 1. Identificar especialidades sin médicos activos o ya inactivadas
+    const result = await client.query(`
+      SELECT id FROM especialidades
+      WHERE activo = FALSE
+    `);
+    
+    const ids = result.rows.map(r => r.id);
+    let eliminadas = 0;
+    
+    if (ids.length > 0) {
+      // 2. Desvincular médicos inactivos de esas especialidades para evitar error de llave foránea
+      await client.query('UPDATE medicos SET especialidad_id = NULL WHERE especialidad_id = ANY($1::int[])', [ids]);
+      
+      // 2.5 Desvincular de los turnos también
+      await client.query('UPDATE turnos SET especialidad_id = NULL WHERE especialidad_id = ANY($1::int[])', [ids]);
+      
+      // 3. Eliminar físicamente
+      const delRes = await client.query('DELETE FROM especialidades WHERE id = ANY($1::int[]) RETURNING id', [ids]);
+      eliminadas = delRes.rowCount;
+      
+      // 4. Log
+      await client.query(`INSERT INTO logs_auditoria (tabla_afectada, accion, campo_modificado, valor_nuevo, usuario_id) VALUES ('especialidades', 'DELETE_BULK', 'registros', 'Limpieza masiva: ' || $1 || ' especialidades eliminadas físicamente', $2)`, [eliminadas, req.usuario.id]);
+    }
+
+    await client.query('COMMIT');
+    res.json({ message: 'Limpieza exitosa', inactivadas: eliminadas });
+  } catch(err) { 
+    await client.query('ROLLBACK');
+    next(err); 
+  } finally {
+    client.release();
+  }
+}
+
+module.exports = {
+  getEspecialidades, createEspecialidad, deleteEspecialidad, limpiarEspecialidadesVacias,
+  getMedicos, createMedico, toggleMedicoStatus,
+  togglePacienteStatus, levantarSuspension, deletePacienteFisico,
+  getAuditoria
+};

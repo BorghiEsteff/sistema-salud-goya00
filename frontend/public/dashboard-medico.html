@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Médico - Salud Goya</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div class="dashboard-container">
+    <aside class="sidebar">
+      <h2>🏥 Salud Goya</h2>
+      <ul class="nav-links">
+        <li><a href="#" class="active" id="nav-agenda">Mi Agenda</a></li>
+      </ul>
+      <button class="logout-btn" onclick="window.logout()">Cerrar Sesión</button>
+    </aside>
+    <main class="main-content">
+      <header class="header">
+        <h1>Panel del Médico</h1>
+        <div class="user-profile" style="display:flex; align-items:center; gap:10px;">
+          <div style="text-align:right; line-height:1.2;">
+            <div id="medico-nombre-span" style="color:var(--text-primary); font-weight:600;"></div>
+            <div id="medico-matricula-span" style="color:var(--text-secondary); font-size:0.85rem;"></div>
+          </div>
+          <span class="badge" style="background:var(--primary-color);color:#fff">Médico</span>
+        </div>
+      </header>
+      <section id="section-agenda" class="card">
+        <div class="card-header">
+          <h3>Mis Turnos de Hoy</h3>
+          <input type="date" id="fecha-filtro" class="form-control" style="width: auto; background: var(--surface-dark);">
+        </div>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Hora</th>
+                <th>Paciente</th>
+                <th>DNI</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="tabla-agenda"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Modal de Historia Clínica -->
+  <div id="historia-modal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="modal-titulo">Cargar Historia Clínica</h2>
+        <span class="close-modal" id="btn-cerrar-modal">&times;</span>
+      </div>
+      <div id="modal-alert" class="alert hidden"></div>
+      <form id="historia-form">
+        <input type="hidden" id="hc-turno-id">
+        <input type="hidden" id="hc-paciente-id">
+        
+        <div class="form-group">
+          <label for="hc-diagnostico">Diagnóstico *</label>
+          <textarea id="hc-diagnostico" rows="3" required></textarea>
+        </div>
+        
+        <div class="form-group">
+          <label for="hc-indicaciones">Indicaciones / Receta</label>
+          <textarea id="hc-indicaciones" rows="3"></textarea>
+        </div>
+        
+        <div class="form-group">
+          <label for="hc-observaciones">Observaciones Internas</label>
+          <textarea id="hc-observaciones" rows="2"></textarea>
+        </div>
+        
+        <div class="form-group">
+          <label for="hc-proxima-consulta">Próxima Consulta (Opcional)</label>
+          <input type="date" id="hc-proxima-consulta" class="form-control">
+        </div>
+        
+        <div class="form-group">
+          <label for="hc-archivo">Adjuntar Archivo (PDF, JPG, PNG)</label>
+          <input type="file" id="hc-archivo" class="form-control" accept=".pdf,.jpg,.jpeg,.png">
+        </div>
+        
+        <button type="submit" class="btn btn-primary btn-block" id="btn-guardar-hc">Guardar Historia y Adjuntos</button>
+      </form>
+    </div>
+  </div>
+
+  <script src="js/api.js"></script>
+  <script src="js/medico.js"></script>
+</body>
+</html>

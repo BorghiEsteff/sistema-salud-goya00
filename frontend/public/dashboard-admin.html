@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Salud Goya - Admin Dashboard</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div class="dashboard-container">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <h2>🏥 Salud Goya</h2>
+      <ul class="nav-links">
+        <li><a href="#" class="active" id="nav-especialidades">Especialidades</a></li>
+        <li><a href="#" id="nav-medicos">Médicos</a></li>
+        <li><a href="#" id="nav-pacientes">Pacientes / Suspensiones</a></li>
+        <li><a href="#" id="nav-auditoria">Logs de Auditoría</a></li>
+      </ul>
+      <button class="logout-btn" onclick="window.logout()">Cerrar Sesión</button>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <header class="header">
+        <h1>Panel de Administración</h1>
+        <div class="user-profile">
+          <span class="badge" style="background:var(--primary-color);color:#fff">Admin</span>
+        </div>
+      </header>
+
+      <!-- Section: Especialidades -->
+      <section id="section-especialidades" class="card">
+        <div class="card-header">
+          <h3>Especialidades Médicas</h3>
+          <div>
+            <button class="btn-primary" style="background-color: var(--danger-color);" onclick="limpiarEspecialidadesVacias()">Limpiar Vacías</button>
+            <button class="btn-primary" onclick="document.getElementById('modal-especialidad').classList.remove('hidden')">+ Nueva Especialidad</button>
+          </div>
+        </div>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Nombre</th>
+                <th>Descripción</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="tabla-especialidades"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Section: Médicos -->
+      <section id="section-medicos" class="card" style="display: none;">
+        <div class="card-header">
+          <h3>Gestión de Médicos</h3>
+          <button class="btn-primary" onclick="document.getElementById('modal-medico').classList.remove('hidden')">+ Nuevo Médico</button>
+        </div>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Matrícula</th>
+                <th>Nombre</th>
+                <th>Especialidad</th>
+                <th>Email</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="tabla-medicos"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Section: Pacientes -->
+      <section id="section-pacientes" class="card" style="display: none;">
+        <div class="card-header">
+          <h3>Control de Pacientes</h3>
+        </div>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>DNI</th>
+                <th>Nombre</th>
+                <th>Estado Cuenta</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="tabla-pacientes"></tbody>
+          </table>
+        </div>
+      </section>
+      <!-- Section: Auditoria -->
+      <section id="section-auditoria" class="card" style="display: none;">
+        <div class="card-header">
+          <h3>Logs de Auditoría</h3>
+          <div>
+            <input type="date" id="filtro-auditoria-desde" class="form-control" style="display:inline-block; width:auto; padding:5px; border-radius:5px;">
+            <input type="date" id="filtro-auditoria-hasta" class="form-control" style="display:inline-block; width:auto; padding:5px; border-radius:5px;">
+            <button class="btn btn-secondary" id="btn-filtrar-auditoria">Filtrar</button>
+          </div>
+        </div>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Fecha y Hora</th>
+                <th>Admin</th>
+                <th>Acción</th>
+                <th>Detalles</th>
+              </tr>
+            </thead>
+            <tbody id="tabla-auditoria"></tbody>
+          </table>
+        </div>
+      </section>
+      
+      <!-- Modales -->
+      <div id="modal-especialidad" class="modal hidden">
+        <div class="modal-content" style="max-width: 400px; padding: 2rem;">
+          <h3>Nueva Especialidad</h3>
+          <form id="form-especialidad" onsubmit="event.preventDefault();">
+            <div class="form-group">
+              <label>Nombre</label>
+              <input type="text" id="esp-nombre" required>
+            </div>
+            <div class="form-group">
+              <label>Descripción</label>
+              <textarea id="esp-desc" rows="3"></textarea>
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 1rem;">
+              <button type="submit" class="btn btn-primary" style="flex: 1;">Guardar</button>
+              <button type="button" class="btn btn-secondary" style="flex: 1;" onclick="document.getElementById('modal-especialidad').classList.add('hidden')">Cancelar</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <div id="modal-medico" class="modal hidden">
+        <div class="modal-content" style="max-width: 500px; padding: 2rem;">
+          <h3>Registrar Nuevo Médico</h3>
+          <form id="form-medico" onsubmit="event.preventDefault();">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+              <div class="form-group"><label>Nombre</label><input type="text" id="med-nombre" required></div>
+              <div class="form-group"><label>Apellido</label><input type="text" id="med-apellido" required></div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top:10px;">
+              <div class="form-group"><label>Email</label><input type="email" id="med-email" required></div>
+              <div class="form-group"><label>Matrícula</label><input type="text" id="med-matricula" required></div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top:10px;">
+              <div class="form-group">
+                <label>Especialidad</label>
+                <select id="med-especialidad" required><option value="">Cargando...</option></select>
+              </div>
+              <div class="form-group"><label>Teléfono</label><input type="text" id="med-telefono" required></div>
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 1.5rem;">
+              <button type="submit" class="btn btn-primary" id="btn-guardar-medico" style="flex: 1;">Generar y Guardar</button>
+              <button type="button" class="btn btn-secondary" style="flex: 1;" onclick="document.getElementById('modal-medico').classList.add('hidden')">Cancelar</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </main>
+  </div>
+  <script src="js/api.js"></script>
+  <script src="js/admin.js"></script>
+</body>
+</html>
