@@ -1,5 +1,4 @@
 {
-  "_comment": "La configuración de subdominios (app. y pacientes.) se hace desde el panel de Vercel manualmente, no desde este archivo.",
   "rewrites": [
     { "source": "/portal", "destination": "/public/portal.html" },
     { "source": "/", "destination": "/public/portal.html" },
