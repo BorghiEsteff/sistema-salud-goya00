@@ -1,7 +1,7 @@
 // Wrapper centralizado para las peticiones al backend
 // REGLA CRÍTICA #7: Toda llamada a la API debe pasar por aquí
 
-const API_URL = 'http://localhost:3000/api';
+const API_URL = 'https://sistema-salud-goya00.onrender.com/api';
 
 async function apiCall(endpoint, method = 'GET', body = null) {
   // REGLA CRÍTICA #6: Usamos sessionStorage para que el token se borre al cerrar la pestaña
