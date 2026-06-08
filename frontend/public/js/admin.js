@@ -234,6 +234,11 @@ async function cargarAuditoria() {
   const desde = document.getElementById('filtro-auditoria-desde').value;
   const hasta = document.getElementById('filtro-auditoria-hasta').value;
   
+  if (desde && hasta && new Date(desde) > new Date(hasta)) {
+    alert("La fecha 'Desde' no puede ser mayor que la fecha 'Hasta'.");
+    return;
+  }
+  
   let url = '/admin/auditoria?';
   if (desde) url += 'fecha_desde=' + desde + '&';
   if (hasta) url += 'fecha_hasta=' + hasta;
@@ -270,3 +275,8 @@ async function cargarAuditoria() {
 }
 
 document.getElementById('btn-filtrar-auditoria').addEventListener('click', cargarAuditoria);
+document.getElementById('btn-limpiar-auditoria').addEventListener('click', () => {
+  document.getElementById('filtro-auditoria-desde').value = '';
+  document.getElementById('filtro-auditoria-hasta').value = '';
+  cargarAuditoria();
+});

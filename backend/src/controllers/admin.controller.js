@@ -107,12 +107,21 @@ async function levantarSuspension(req, res, next) {
 async function getAuditoria(req, res, next) {
   try {
     const { fecha_desde, fecha_hasta } = req.query;
+
+    // Validación de formatos de fecha
+    if (fecha_desde && isNaN(Date.parse(fecha_desde))) {
+      return res.status(400).json({ error: 'Formato de fecha_desde inválido' });
+    }
+    if (fecha_hasta && isNaN(Date.parse(fecha_hasta))) {
+      return res.status(400).json({ error: 'Formato de fecha_hasta inválido' });
+    }
+
     let query = `
       SELECT l.*, u.email as admin_email,
              CASE 
-               WHEN l.tabla_afectada = 'medicos' THEN (SELECT nombre || ' ' || apellido FROM medicos WHERE id::text = l.registro_id)
-               WHEN l.tabla_afectada = 'pacientes' THEN (SELECT nombre || ' ' || apellido FROM pacientes WHERE id::text = l.registro_id)
-               WHEN l.tabla_afectada = 'especialidades' THEN (SELECT nombre FROM especialidades WHERE id::text = l.registro_id)
+               WHEN l.tabla_afectada = 'medicos' THEN (SELECT nombre || ' ' || apellido FROM medicos WHERE id = l.registro_id)
+               WHEN l.tabla_afectada = 'pacientes' THEN (SELECT nombre || ' ' || apellido FROM pacientes WHERE id = l.registro_id)
+               WHEN l.tabla_afectada = 'especialidades' THEN (SELECT nombre FROM especialidades WHERE id = l.registro_id)
                ELSE NULL
              END as nombre_afectado
       FROM logs_auditoria l
@@ -123,11 +132,11 @@ async function getAuditoria(req, res, next) {
     
     if (fecha_desde) {
       params.push(fecha_desde);
-      query += ` AND DATE(l.creado_en) >= $${params.length}`;
+      query += ` AND l.creado_en::date >= $${params.length}`;
     }
     if (fecha_hasta) {
       params.push(fecha_hasta);
-      query += ` AND DATE(l.creado_en) <= $${params.length}`;
+      query += ` AND l.creado_en::date <= $${params.length}`;
     }
     
     query += ` ORDER BY l.creado_en DESC LIMIT 100`;
