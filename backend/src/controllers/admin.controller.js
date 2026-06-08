@@ -119,9 +119,9 @@ async function getAuditoria(req, res, next) {
     let query = `
       SELECT l.*, u.email as admin_email,
              CASE 
-               WHEN l.tabla_afectada = 'medicos' THEN (SELECT nombre || ' ' || apellido FROM medicos WHERE id = l.registro_id)
-               WHEN l.tabla_afectada = 'pacientes' THEN (SELECT nombre || ' ' || apellido FROM pacientes WHERE id = l.registro_id)
-               WHEN l.tabla_afectada = 'especialidades' THEN (SELECT nombre FROM especialidades WHERE id = l.registro_id)
+               WHEN l.tabla_afectada = 'medicos' THEN (SELECT nombre || ' ' || apellido FROM medicos WHERE id::text = l.registro_id::text)
+               WHEN l.tabla_afectada = 'pacientes' THEN (SELECT nombre || ' ' || apellido FROM pacientes WHERE id::text = l.registro_id::text)
+               WHEN l.tabla_afectada = 'especialidades' THEN (SELECT nombre FROM especialidades WHERE id::text = l.registro_id::text)
                ELSE NULL
              END as nombre_afectado
       FROM logs_auditoria l
