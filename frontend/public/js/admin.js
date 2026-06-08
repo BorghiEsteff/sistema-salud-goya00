@@ -218,8 +218,9 @@ document.getElementById('form-medico').addEventListener('submit', async (e) => {
     document.getElementById('modal-medico').classList.add('hidden');
     cargarMedicos();
     
-    // Mostrar la contraseña una única vez
-    alert('¡Médico creado exitosamente!\\n\\nLa contraseña temporal es: ' + randomPass + '\\n\\nPor favor, copie esta contraseña y entréguesela al médico. Solo se mostrará esta vez.');
+    // Mostrar modal con contraseña
+    document.getElementById('generated-password').innerText = randomPass;
+    document.getElementById('modal-password').classList.remove('hidden');
   } catch(err) {
     alert(err.message);
   } finally {
@@ -227,6 +228,23 @@ document.getElementById('form-medico').addEventListener('submit', async (e) => {
     btn.innerText = 'Generar y Guardar';
   }
 });
+
+// --- COPIAR CONTRASEÑA ---
+window.copiarPassword = () => {
+  const pass = document.getElementById('generated-password').innerText;
+  navigator.clipboard.writeText(pass).then(() => {
+    const btn = document.getElementById('btn-copiar-pass');
+    btn.innerText = '¡Copiado!';
+    btn.style.backgroundColor = 'var(--success-color, #10b981)';
+    setTimeout(() => {
+      document.getElementById('modal-password').classList.add('hidden');
+      btn.innerText = 'Copiar y Cerrar';
+      btn.style.backgroundColor = '';
+    }, 1500);
+  }).catch(err => {
+    alert('Error al copiar: ' + err);
+  });
+};
 
 // --- AUDITORÍA ---
 async function cargarAuditoria() {

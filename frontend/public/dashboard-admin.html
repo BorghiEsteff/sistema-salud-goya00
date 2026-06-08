@@ -170,6 +170,16 @@
         </div>
       </div>
     </main>
+    <div id="modal-password" class="modal hidden">
+      <div class="modal-content" style="max-width: 400px; padding: 2rem; text-align: center;">
+        <h3 style="color: var(--success-color, #10b981); margin-bottom: 10px;">¡Médico Creado!</h3>
+        <p style="color: var(--text-secondary, #a0aec0); margin-bottom: 20px;">Copie la contraseña temporal. Solo se mostrará esta vez.</p>
+        <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.1);">
+          <strong id="generated-password" style="font-size: 1.5rem; letter-spacing: 2px; color: var(--primary-color);"></strong>
+        </div>
+        <button type="button" id="btn-copiar-pass" class="btn btn-primary" onclick="copiarPassword()" style="width: 100%;">Copiar y Cerrar</button>
+      </div>
+    </div>
   </div>
   <script src="js/api.js"></script>
   <script src="js/admin.js"></script>
