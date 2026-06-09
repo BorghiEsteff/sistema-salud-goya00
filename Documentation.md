@@ -64,7 +64,8 @@ Salud Goya es una plataforma digital integral diseñada para la gestión de turn
 ### Frontend
 - **Lenguajes:** HTML5, CSS3, JavaScript (ES6+) Vanilla.
 - **Comunicación:** `fetch` API.
-- **UI/UX:** CSS nativo (Variables, Flexbox, Grid), sin frameworks pesados para máxima performance.
+- **Variables de Entorno:** Configuración dinámica de la URL del backend mediante `window.ENV_API_URL` para facilitar despliegues en plataformas como Vercel.
+- **UI/UX:** CSS nativo (Variables, Flexbox, Grid), sin frameworks pesados para máxima performance. Reemplazo de alertas nativas del navegador por un sistema de notificaciones custom (`visualConfirm`, `showGlobalError`).
 
 ### Backend
 - **Entorno:** Node.js.
@@ -133,7 +134,7 @@ salud-goya/
 ## 3.1 Principios de Diseño
 - **Mobile First:** Componentes diseñados para colapsar suavemente en pantallas pequeñas.
 - **Minimalismo y Contraste:** Uso de fondos oscuros (Dark Mode nativo/opcional) con acentos vibrantes para llamar la atención a las acciones primarias (Primary Buttons).
-- **Feedback visual:** Alertas, modales, y cambios de color (rojo para peligro, verde para éxito) en botones de acción.
+- **Feedback visual:** Uso exclusivo de notificaciones dinámicas (toasts) y modales custom (`visualConfirm`, `showGlobalError`) para advertencias y errores, eliminando el uso intrusivo de `alert()` o `prompt()` nativos del navegador. Cambios de color (rojo para peligro, verde para éxito) en botones de acción y etiquetas de estado.
 
 ## 3.2 Paleta de Colores
 | Token | Valor | Uso |
@@ -174,12 +175,13 @@ Landing / Login
 5. `POST /api/turnos`. El backend valida que el paciente no esté suspendido y que el horario esté libre. Se crea el registro.
 
 ## 4.3 Flujo: Historia Clínica y Archivos
-1. El médico atiende el turno.
-2. Ingresa a "Cargar Evolución".
-3. Escribe diagnóstico y receta (`POST /api/historias`).
-4. Sube un archivo PDF o JPG.
-5. El middleware de `multer` captura el archivo en memoria, lo sube a la API de **Cloudinary**.
-6. Cloudinary devuelve una URL pública que se guarda en la tabla `archivos_adjuntos` de la BD.
+1. El médico atiende el turno. (Los turnos muestran acciones de Atendido, Ausente y Cancelar que cambian el estado dinámicamente).
+2. Hace clic en el nombre del paciente para abrir el modal visor del historial (`visor-historial-modal`).
+3. El backend verifica estrictamente por motivos de seguridad que el médico logueado tenga un turno (`solicitado`, `confirmado` o `atendido`) con el paciente antes de retornar los datos, y bloquea el acceso a perfiles administrativos (Secretaría).
+4. El médico redacta la evolución o selecciona múltiples archivos PDF.
+5. El frontend itera los archivos y realiza llamadas secuenciales `fetch` enviándolos vía `FormData` junto al `turno_id` y `paciente_id`.
+6. El middleware de `multer` captura el archivo, se sube a la API de **Cloudinary** y se guarda el registro de la URL en la tabla `archivos_adjuntos` de Supabase.
+7. El paciente, al ingresar a su portal, consulta su historial y visualiza los enlaces directos de descarga provistos por Cloudinary.
 
 ---
 
