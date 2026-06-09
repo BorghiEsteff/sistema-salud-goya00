@@ -23,7 +23,7 @@ async function getMiAgenda(req, res, next) {
     const fecha = req.query.fecha || new Date().toISOString().split('T')[0]; // Hoy por defecto
 
     const result = await db.query(`
-      SELECT t.id, t.fecha_turno, t.hora_inicio, t.hora_fin, t.estado, t.motivo_consulta,
+      SELECT t.id, t.fecha_turno, t.hora_inicio, t.hora_fin, t.estado, t.motivo_consulta, t.paciente_id,
              p.nombre as paciente_nombre, p.apellido as paciente_apellido, p.dni
       FROM turnos t
       JOIN pacientes p ON t.paciente_id = p.id
