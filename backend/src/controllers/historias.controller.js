@@ -47,15 +47,26 @@ async function getHistoriaPaciente(req, res, next) {
   try {
     const { id } = req.params; // paciente_id
 
+    if (req.usuario.rol === 'secretaria') {
+      return res.status(403).json({ error: 'No tenés permisos para ver historias clínicas.' });
+    }
+
     // Verificación de seguridad
     if (req.usuario.rol === 'paciente' && req.usuario.paciente_id !== id) {
       return res.status(403).json({ error: 'No tienes permiso para ver la historia clínica de este paciente.' });
     }
 
     if (req.usuario.rol === 'medico') {
-      const t = await db.query('SELECT 1 FROM turnos WHERE medico_id = $1 AND paciente_id = $2 LIMIT 1', [req.usuario.medico_id, id]);
+      const t = await db.query(
+        `SELECT 1 FROM turnos 
+         WHERE medico_id = $1 
+           AND paciente_id = $2 
+           AND estado IN ('solicitado', 'confirmado', 'atendido')
+         LIMIT 1`,
+        [req.usuario.medico_id, id]
+      );
       if (t.rows.length === 0) {
-        return res.status(403).json({ error: 'Solo puedes ver historias clínicas de pacientes que has atendido.' });
+        return res.status(403).json({ error: 'No tenés acceso al historial de este paciente.' });
       }
     }
 

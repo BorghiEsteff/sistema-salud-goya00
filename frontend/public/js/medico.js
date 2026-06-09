@@ -1,3 +1,44 @@
+// Función para mostrar errores
+function showGlobalError(message, type = 'error') {
+  const alertDiv = document.getElementById('dashboard-global-error');
+  alertDiv.textContent = message;
+  alertDiv.className = `alert ${type}`; // quita hidden y pone clase de color
+  
+  // Auto ocultar después de 4 segundos
+  setTimeout(() => {
+    alertDiv.classList.add('hidden');
+  }, 4000);
+}
+
+// Utilidad para reemplazo de confirm()
+function visualConfirm(titulo, mensaje) {
+  return new Promise((resolve) => {
+    const modalConfirm = document.getElementById('confirmar-modal');
+    document.getElementById('confirmar-titulo').innerText = titulo;
+    document.getElementById('confirmar-mensaje').innerText = mensaje;
+    
+    const btnAceptar = document.getElementById('btn-confirmar-aceptar');
+    const btnCancelar = document.getElementById('btn-confirmar-cancelar');
+    
+    const newBtnAceptar = btnAceptar.cloneNode(true);
+    const newBtnCancelar = btnCancelar.cloneNode(true);
+    btnAceptar.parentNode.replaceChild(newBtnAceptar, btnAceptar);
+    btnCancelar.parentNode.replaceChild(newBtnCancelar, btnCancelar);
+    
+    modalConfirm.classList.remove('hidden');
+    
+    newBtnAceptar.onclick = () => {
+      modalConfirm.classList.add('hidden');
+      resolve(true);
+    };
+    
+    newBtnCancelar.onclick = () => {
+      modalConfirm.classList.add('hidden');
+      resolve(false);
+    };
+  });
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
   const user = JSON.parse(sessionStorage.getItem('usuario'));
   if (!user || user.rol !== 'medico') {
@@ -9,7 +50,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const perfil = await api.get('/medicos/me');
     document.getElementById('medico-nombre-span').innerText = 'Dr. ' + perfil.nombre + ' ' + perfil.apellido;
     document.getElementById('medico-matricula-span').innerText = 'Mat: ' + perfil.matricula;
-  } catch(e) { console.error(e); }
+  } catch(e) { showGlobalError(e.message || 'Error al cargar perfil'); }
 
   // Establecer fecha de hoy
   const hoy = new Date().toISOString().split('T')[0];
@@ -29,32 +70,176 @@ async function cargarAgenda() {
       return;
     }
     data.forEach(turno => {
+      // Modulo 2 Prep: Nombre clicable para historial
+      const nombreClicable = `<a href="#" onclick="abrirHistorial('${turno.paciente_id}')" style="color:var(--primary-color); font-weight:bold; text-decoration:underline;">${turno.paciente_nombre} ${turno.paciente_apellido}</a>`;
+
+      let acciones = '-';
+      if (turno.estado === 'solicitado' || turno.estado === 'confirmado') {
+        acciones = `
+          <button onclick="marcarAtendido('${turno.id}', '${turno.paciente_id}')" style="color:var(--secondary-color);background:none;border:none;cursor:pointer;font-weight:bold;margin-right:10px;">✔ Atendido</button>
+          <button onclick="cambiarEstado('${turno.id}', 'ausente')" style="color:var(--danger-color);background:none;border:none;cursor:pointer;font-weight:bold;margin-right:10px;">✖ Ausente</button>
+          <button onclick="cancelarTurno('${turno.id}')" style="color:var(--text-secondary);background:none;border:none;cursor:pointer;font-weight:bold;">Cancelar</button>
+        `;
+      }
+
       tbody.innerHTML += `
         <tr>
           <td>${turno.hora_inicio.substr(0,5)}</td>
-          <td>${turno.paciente_nombre} ${turno.paciente_apellido}</td>
+          <td>${nombreClicable}</td>
           <td>${turno.dni}</td>
           <td><span class="badge ${turno.estado}">${turno.estado}</span></td>
-          <td>
-            ${turno.estado === 'confirmado' ? `
-              <button onclick="marcarAtendido('${turno.id}', '${turno.paciente_id}')" style="color:var(--secondary-color);background:none;border:none;cursor:pointer;font-weight:bold;margin-right:10px;">✔ Atendido</button>
-              <button onclick="cambiarEstado('${turno.id}', 'ausente')" style="color:var(--danger-color);background:none;border:none;cursor:pointer;font-weight:bold;">✖ Ausente</button>
-            ` : '-'}
-          </td>
+          <td>${acciones}</td>
         </tr>
       `;
     });
-  } catch (err) { alert(err.message); }
+  } catch (err) { showGlobalError(err.message || 'Error al cargar la agenda'); }
 }
 
 async function cambiarEstado(id, nuevoEstado) {
-  if(confirm(`¿Marcar este turno como ${nuevoEstado}?`)) {
+  const confirmado = await visualConfirm(
+    'Confirmar Acción', 
+    `¿Marcar este turno como ${nuevoEstado}?`
+  );
+  if (confirmado) {
     try {
       await api.put(`/turnos/${id}/estado`, { estado: nuevoEstado });
+      showGlobalError(`Turno marcado como ${nuevoEstado} exitosamente`, 'success');
       cargarAgenda();
-    } catch(err) { alert(err.message); }
+    } catch(err) { showGlobalError(err.message || 'Error al cambiar estado'); }
   }
 }
+
+// Abrir modal de cancelación
+function cancelarTurno(id) {
+  document.getElementById('cancelar-turno-id').value = id;
+  document.getElementById('cancelar-motivo').value = '';
+  document.getElementById('cancelar-modal').classList.remove('hidden');
+}
+
+// Envío del modal de cancelación
+document.getElementById('cancelar-form')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const id = document.getElementById('cancelar-turno-id').value;
+  const motivo = document.getElementById('cancelar-motivo').value;
+  
+  try {
+    await api.put(`/turnos/${id}/cancelar`, { motivo_cancelacion: motivo });
+    document.getElementById('cancelar-modal').classList.add('hidden');
+    showGlobalError('Turno cancelado exitosamente', 'success');
+    cargarAgenda();
+  } catch(err) { showGlobalError(err.message || 'Error al cancelar turno'); }
+});
+
+let pacienteSeleccionadoParaHistorial = null;
+let turnoSeleccionadoParaHistorial = null;
+
+// Llama al GET de historias y abre el modal
+async function abrirHistorial(pacienteId, turnoId) {
+  pacienteSeleccionadoParaHistorial = pacienteId;
+  turnoSeleccionadoParaHistorial = turnoId;
+  
+  // Limpiar la vista
+  document.getElementById('historial-contenido').innerHTML = 'Cargando...';
+  document.getElementById('archivos-lista').innerHTML = '';
+  document.getElementById('upload-pdf-input').value = '';
+  document.getElementById('visor-historial-modal').classList.remove('hidden');
+
+  try {
+    // 1. Cargar el texto de las historias
+    const historias = await api.get(`/historias/paciente/${pacienteId}`);
+    let htmlHistorias = '';
+    
+    if (historias.length === 0) {
+      htmlHistorias = '<p style="color:var(--text-secondary)">No hay historias registradas.</p>';
+    } else {
+      historias.forEach(h => {
+        htmlHistorias += `
+          <div style="border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px; margin-bottom: 10px; font-size: 0.9rem;">
+            <strong style="color:var(--primary-color)">${h.fecha_turno.split('T')[0]} - Dr. ${h.medico_apellido}</strong><br>
+            <span style="color:var(--text-secondary)">Dx:</span> ${h.diagnostico}<br>
+            <span style="color:var(--text-secondary)">Ind:</span> ${h.indicaciones || '-'}
+          </div>
+        `;
+      });
+    }
+    document.getElementById('historial-contenido').innerHTML = htmlHistorias;
+
+    // 2. Cargar la lista de PDFs
+    await recargarArchivos(pacienteId);
+
+  } catch (err) {
+    document.getElementById('historial-contenido').innerHTML = `<span style="color:var(--danger-color)">${err.message}</span>`;
+  }
+}
+
+// Función auxiliar para recuperar los archivos y pintarlos
+async function recargarArchivos(pacienteId) {
+  try {
+    const archivos = await api.get(`/archivos/paciente/${pacienteId}`);
+    const lista = document.getElementById('archivos-lista');
+    lista.innerHTML = '';
+    
+    if (archivos.length === 0) {
+      lista.innerHTML = '<li style="color:var(--text-secondary); font-size:0.9rem;">No hay PDFs adjuntos.</li>';
+      return;
+    }
+    
+    archivos.forEach(a => {
+      lista.innerHTML += `
+        <li style="margin-bottom: 8px;">
+          <a href="${a.url_cloudinary}" target="_blank" style="color: var(--secondary-color); text-decoration: none; font-weight: 600;">
+            📄 ${a.nombre_archivo}
+          </a>
+          <br><span style="font-size: 0.75rem; color: var(--text-secondary);">${a.creado_en.split('T')[0]}</span>
+        </li>
+      `;
+    });
+  } catch(err) {
+    showGlobalError('Error al cargar PDFs: ' + err.message);
+  }
+}
+
+// Lógica de Subida Iterativa de Archivos
+document.getElementById('btn-subir-pdfs')?.addEventListener('click', async () => {
+  if (!pacienteSeleccionadoParaHistorial || !turnoSeleccionadoParaHistorial) return;
+  
+  const fileInput = document.getElementById('upload-pdf-input');
+  const files = fileInput.files;
+  
+  if (files.length === 0) {
+    showGlobalError('Por favor selecciona al menos un archivo PDF.', 'error');
+    return;
+  }
+
+  const btnSubir = document.getElementById('btn-subir-pdfs');
+  btnSubir.disabled = true;
+  btnSubir.innerText = 'Subiendo...';
+
+  try {
+    // Enviamos POST por cada archivo de forma secuencial usando api.post
+    for (let i = 0; i < files.length; i++) {
+      const formData = new FormData();
+      formData.append('archivo', files[i]);
+      formData.append('paciente_id', pacienteSeleccionadoParaHistorial);
+      formData.append('turno_id', turnoSeleccionadoParaHistorial);
+      formData.append('tipo_archivo', 'documento_pdf');
+      
+      await api.post('/archivos/subir', formData);
+    }
+    
+    showGlobalError('Todos los archivos se subieron con éxito.', 'success');
+    fileInput.value = ''; // Limpiar input
+    
+    // Refrescar lista de PDFs
+    await recargarArchivos(pacienteSeleccionadoParaHistorial);
+    
+  } catch(err) {
+    showGlobalError('Hubo un error subiendo archivos: ' + err.message);
+  } finally {
+    btnSubir.disabled = false;
+    btnSubir.innerText = 'Subir PDFs';
+  }
+});
 
 // LÓGICA DE HISTORIA CLÍNICA Y ARCHIVOS (Sprint 3)
 const modal = document.getElementById('historia-modal');
@@ -66,11 +251,16 @@ btnCerrar.onclick = () => modal.classList.add('hidden');
 
 // Al hacer clic en "Atendido"
 async function marcarAtendido(turnoId, pacienteId) {
-  if(!confirm('¿El paciente se encuentra presente y listo para ser atendido?')) return;
+  const confirmado = await visualConfirm(
+    'Marcar Atendido', 
+    '¿El paciente se encuentra presente y listo para ser atendido?'
+  );
+  if (!confirmado) return;
   
   try {
     // 1. Cambiar el estado en la base de datos (Regla Maestra)
     await api.put(`/turnos/${turnoId}/estado`, { estado: 'atendido' });
+    showGlobalError('Estado actualizado. Por favor cargue la historia clínica.', 'success');
     cargarAgenda(); // Refrescar visualmente la tabla
     
     // 2. Abrir Modal para la Historia
@@ -80,7 +270,7 @@ async function marcarAtendido(turnoId, pacienteId) {
     alertDiv.classList.add('hidden');
     modal.classList.remove('hidden');
     
-  } catch(err) { alert(err.message); }
+  } catch(err) { showGlobalError(err.message || 'Error al marcar como atendido'); }
 }
 
 // Envío del formulario del Modal
@@ -120,7 +310,7 @@ form.addEventListener('submit', async (e) => {
     }
     
     modal.classList.add('hidden');
-    alert('¡Historia Clínica guardada exitosamente!');
+    showGlobalError('¡Historia Clínica guardada exitosamente!', 'success');
     
   } catch(err) {
     alertDiv.textContent = err.message;

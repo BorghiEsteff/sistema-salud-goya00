@@ -34,7 +34,14 @@ async function getArchivosPaciente(req, res, next) {
     }
 
     if (req.usuario.rol === 'medico') {
-      const t = await db.query('SELECT 1 FROM turnos WHERE medico_id = $1 AND paciente_id = $2 LIMIT 1', [req.usuario.medico_id, id]);
+      const t = await db.query(
+        `SELECT 1 FROM turnos
+         WHERE medico_id = $1
+           AND paciente_id = $2
+           AND estado IN ('solicitado', 'confirmado', 'atendido')
+         LIMIT 1`,
+        [req.usuario.medico_id, id]
+      );
       if (t.rows.length === 0) {
         return res.status(403).json({ error: 'Solo puedes ver los archivos de pacientes de tu nómina.' });
       }

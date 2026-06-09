@@ -10,6 +10,10 @@ router.use(verificarToken);
 router.post('/', verificarRol(['medico', 'admin']), historiasController.crearHistoria);
 
 // Lectura de historial por paciente
-router.get('/paciente/:id', historiasController.getHistoriaPaciente);
+router.get(
+  '/paciente/:id',
+  verificarRol(['admin', 'medico', 'paciente']),
+  historiasController.getHistoriaPaciente
+);
 
 module.exports = router;
