@@ -2,36 +2,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const db = require('../config/db');
 
-async function register(req, res, next) {
-  try {
-    const { email, password, rol } = req.body;
-    
-    // Validación básica
-    if (!email || !password || !rol) {
-      return res.status(400).json({ error: 'Faltan campos obligatorios' });
-    }
 
-    // Verificar si el usuario ya existe
-    const usuarioExistente = await db.query('SELECT id FROM usuarios WHERE email = $1', [email]);
-    if (usuarioExistente.rows.length > 0) {
-      return res.status(400).json({ error: 'El email ya está registrado' });
-    }
-
-    // Hashear la contraseña
-    const salt = await bcrypt.genSalt(10);
-    const passwordHash = await bcrypt.hash(password, salt);
-
-    // Insertar el usuario
-    const result = await db.query(
-      'INSERT INTO usuarios (email, password_hash, rol) VALUES ($1, $2, $3) RETURNING id, email, rol, activo, creado_en',
-      [email, passwordHash, rol]
-    );
-
-    res.status(201).json(result.rows[0]);
-  } catch (error) {
-    next(error);
-  }
-}
 
 async function login(req, res, next) {
   try {
@@ -91,4 +62,4 @@ async function login(req, res, next) {
   }
 }
 
-module.exports = { register, login };
+module.exports = { login };
