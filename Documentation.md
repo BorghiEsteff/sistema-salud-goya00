@@ -115,17 +115,49 @@ salud-goya/
 └── package.json
 ```
 
-## 2.4 Endpoints de la API REST (Resumen)
+## 2.4 Endpoints de la API REST (Actualizado)
 
 | Método | Endpoint | Descripción | Acceso |
 |---|---|---|---|
-| POST | `/api/auth/login` | Autenticación | Público |
-| POST | `/api/auth/registro` | Alta de pacientes | Público |
-| GET | `/api/admin/auditoria` | Ver logs del sistema | Admin |
-| GET | `/api/turnos/mis-turnos` | Lista de turnos | Paciente/Médico |
-| POST | `/api/turnos` | Reserva un turno | Paciente |
-| POST | `/api/archivos` | Subida de estudios/recetas | Médico |
-| GET | `/api/historias/:id` | Ver historial de paciente | Paciente/Médico |
+| **Admin** | `/api/admin` | | |
+| `GET` | `/api/admin/especialidades` | Listar especialidades (vista administrativa) | Admin |
+| `POST` | `/api/admin/especialidades` | Crear nueva especialidad | Admin |
+| `POST` | `/api/admin/especialidades/limpiar-vacias` | Eliminar físicamente especialidades sin médicos | Admin |
+| `DELETE` | `/api/admin/especialidades/:id` | Eliminar especialidad por ID | Admin |
+| `GET` | `/api/admin/medicos` | Listar todos los médicos | Admin |
+| `POST` | `/api/admin/medicos` | Crear nuevo perfil médico | Admin |
+| `PUT` | `/api/admin/medicos/:id/estado` | Activar o inactivar médico | Admin |
+| `PUT` | `/api/admin/pacientes/:id/estado` | Activar o inactivar paciente | Admin |
+| `PUT` | `/api/admin/pacientes/:id/levantar-suspension`| Levantar suspensión automática de un paciente | Admin |
+| `DELETE` | `/api/admin/pacientes/:id` | Eliminar paciente del sistema | Admin |
+| `GET` | `/api/admin/auditoria` | Ver logs de auditoría | Admin |
+| **Auth** | `/api/auth` | | |
+| `POST` | `/api/auth/login` | Autenticación y generación de JWT | Público |
+| **Archivos** | `/api/archivos` | | |
+| `POST` | `/api/archivos/subir` | Subir PDF/Imagen a Cloudinary | Admin, Sec, Médico |
+| `GET` | `/api/archivos/paciente/:id` | Ver archivos adjuntos de un paciente | Admin, Sec, Médico, Paciente |
+| **Historias** | `/api/historias` | | |
+| `POST` | `/api/historias` | Cargar evolución médica a un turno | Médico, Admin |
+| `GET` | `/api/historias/paciente/:id` | Ver historial completo de un paciente | Admin, Médico, Paciente |
+| **Médicos** | `/api/medicos` | | |
+| `GET` | `/api/medicos/me` | Ver perfil del médico autenticado | Médico |
+| `GET` | `/api/medicos/me/agenda` | Obtener agenda de turnos asignados | Médico |
+| **Pacientes** | `/api/pacientes` | | |
+| `POST` | `/api/pacientes/registro` | Auto-registro público de pacientes | Público |
+| `GET` | `/api/pacientes/me` | Ver perfil del paciente autenticado | Paciente |
+| `PUT` | `/api/pacientes/me` | Actualizar perfil propio | Paciente |
+| `GET` | `/api/pacientes` | Listar todos los pacientes | Admin, Sec |
+| `GET` | `/api/pacientes/:id` | Ver perfil de paciente por ID | Admin, Sec |
+| `PUT` | `/api/pacientes/:id` | Actualizar perfil de paciente por ID | Admin, Sec |
+| **Público** | `/api/public` | | |
+| `GET` | `/api/public/especialidades` | Listar especialidades para combos | Público |
+| `GET` | `/api/public/medicos` | Listar médicos para combos | Público |
+| **Turnos** | `/api/turnos` | | |
+| `GET` | `/api/turnos/disponibilidad` | Consultar slots horarios libres | Público |
+| `GET` | `/api/turnos` | Listar turnos (filtra por rol automáticamente) | Admin, Sec, Médico, Paciente |
+| `POST` | `/api/turnos` | Reservar nuevo turno | Admin, Sec, Paciente |
+| `PUT` | `/api/turnos/:id/cancelar` | Cancelar turno existente | Admin, Sec, Médico, Paciente |
+| `PUT` | `/api/turnos/:id/estado` | Transicionar estado (ej. Confirmado -> Atendido) | Admin, Sec, Médico |
 
 ---
 
@@ -147,13 +179,23 @@ salud-goya/
 | `--text-primary` | `#f8fafc` | Texto principal |
 
 ## 3.3 Flujo de Navegación
+El sistema se encuentra dividido en dos portales independientes para mejorar la seguridad y la experiencia de usuario:
+
+**Portal Público (`portal.html`) - Acceso exclusivo Pacientes**
 ```
-Landing / Login 
-  ├─► Registro
-  └─► [Autenticación]
-        ├─► Dashboard Paciente (Ver Turnos, Nueva Reserva, HCE)
-        ├─► Dashboard Médico (Agenda Diaria, Carga de HCE, Subida de Archivos)
-        └─► Dashboard Admin (Especialidades, Médicos, Pacientes, Auditoría)
+Portal de Pacientes
+  ├─► Registro de nuevo usuario
+  └─► Login de Paciente
+        └─► Dashboard Paciente (Ver Turnos, Nueva Reserva, Consultar HCE)
+```
+
+**Portal Interno (`index.html`) - Acceso exclusivo Staff (Médico, Admin, Secretaría)**
+```
+Portal Interno (Staff)
+  └─► Login Administrativo/Profesional
+        ├─► Dashboard Médico (Agenda Diaria, Carga de Evoluciones, Subida de Archivos)
+        ├─► Dashboard Secretaría (Gestión Rápida de Turnos)
+        └─► Dashboard Admin (CRUD de Especialidades, Médicos, Pacientes, Auditoría)
 ```
 
 ---
@@ -207,3 +249,26 @@ El backend está estructurado con una clara separación de responsabilidades:
 - `historia_clinica`: Evoluciones médicas ligadas a un turno y paciente.
 - `archivos_adjuntos`: URLs de recursos subidos a la nube.
 - `logs_auditoria`: Registro automático e inmutable de cambios en la BD.
+
+---
+
+# SECCIÓN 6 – Evolución y Últimas Implementaciones
+
+## 6.1 Separación de Portales (Público e Interno)
+Para asegurar que los pacientes no interactúen con la interfaz administrativa y viceversa, se implementó una estricta separación de puntos de entrada:
+- **`portal.html`**: Destinado únicamente a los pacientes. Contiene el formulario de Registro y de Login. El JWT es validado y rechaza cualquier acceso que no sea de rol `paciente`.
+- **`index.html`**: Destinado al staff interno (Médicos, Administradores, Secretarías). Rechaza accesos de usuarios tipo `paciente`.
+- *Nota sobre Subdominios:* La configuración a nivel de subdominios a través de `vercel.json` o servidores web está planificada como pendiente para la fase final de deploy. Actualmente ambos portales coexisten bajo el mismo dominio principal, usando diferentes URLs de archivo para aislar la navegación.
+
+## 6.2 Mejoras en el Panel de Administrador
+Se implementaron controles avanzados en el dashboard administrativo para facilitar la moderación:
+- **Activación / Inactivación de Entidades:** Capacidad para suspender y reactivar perfiles de médicos y pacientes. En el caso de los pacientes, también permite levantar las suspensiones automáticas generadas por inasistencias a turnos.
+- **Limpieza de Especialidades Vacías:** Acción masiva (bulk delete) que permite al administrador eliminar físicamente aquellas especialidades inhabilitadas que ya no tengan médicos ni turnos asociados.
+- **Filtros en Auditoría:** El log inmutable de auditoría ahora soporta consultas acotadas por rango de fecha (`fecha_desde` y `fecha_hasta`) para un mejor rastreo de las acciones administrativas.
+
+## 6.3 Flujos de Sprins Completados (1 a 5)
+1. **Arquitectura y Seguridad**: BD en PostgreSQL (Supabase), roles y JWT.
+2. **Dashboards y Máquina de Estados**: CRUDs y transición de estados de turnos con suspensión automática de pacientes ausentes.
+3. **Historias Clínicas**: Carga de evoluciones médicas y reportes.
+4. **Carga de Archivos Adjuntos**: Integración con Multer y Cloudinary para recetas/estudios en PDF e Imágenes.
+5. **Separación de Portales**: Refactor del frontend para independizar la experiencia de Pacientes del Staff Médico.
