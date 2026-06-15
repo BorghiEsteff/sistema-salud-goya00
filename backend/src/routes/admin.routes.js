@@ -25,5 +25,7 @@ router.delete('/pacientes/:id', adminController.deletePacienteFisico);
 
 // Auditoría
 router.get('/auditoria', adminController.getAuditoria);
+// IMPORTANTE: la ruta de exportación debe ir ANTES de module.exports y sin conflicto con :id
+router.get('/auditoria/exportar', adminController.exportarAuditoriaCSV);
 
 module.exports = router;

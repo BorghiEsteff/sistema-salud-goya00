@@ -10,19 +10,26 @@
     <aside class="sidebar">
       <h2>🏥 Salud Goya</h2>
       <ul class="nav-links">
-        <li><a href="#" class="active" id="nav-agenda">Mi Agenda</a></li>
+        <li><a href="#" class="active" id="nav-agenda">📅 Mi Agenda</a></li>
       </ul>
       <button class="logout-btn" onclick="window.logout()">Cerrar Sesión</button>
     </aside>
     <main class="main-content">
       <header class="header">
         <h1>Panel del Médico</h1>
-        <div class="user-profile" style="display:flex; align-items:center; gap:10px;">
-          <div style="text-align:right; line-height:1.2;">
-            <div id="medico-nombre-span" style="color:var(--text-primary); font-weight:600;"></div>
-            <div id="medico-matricula-span" style="color:var(--text-secondary); font-size:0.85rem;"></div>
+        <div style="display: flex; align-items: center; gap: 20px;">
+          <div class="font-control" style="display: flex; align-items: center; gap: 5px;" title="Ajustar tamaño de letra">
+            <span style="font-size: 0.8rem; color: var(--text-secondary);">A-</span>
+            <input type="range" class="font-slider-input" min="14" max="22" value="16" style="width: 70px;">
+            <span style="font-size: 1.1rem; color: var(--text-secondary);">A+</span>
           </div>
-          <span class="badge" style="background:var(--primary-color);color:#fff">Médico</span>
+          <div class="user-profile" style="display:flex; align-items:center; gap:10px;">
+            <div style="text-align:right; line-height:1.2;">
+              <div id="medico-nombre-span" style="color:var(--text-primary); font-weight:600;"></div>
+              <div id="medico-matricula-span" style="color:var(--text-secondary); font-size:0.85rem;"></div>
+            </div>
+            <span class="badge" style="background:var(--primary-color);color:#fff">Médico</span>
+          </div>
         </div>
       </header>
       
@@ -159,5 +166,6 @@
 
   <script src="js/api.js"></script>
   <script src="js/medico.js"></script>
+  <script src="js/accessibility.js"></script>
 </body>
 </html>

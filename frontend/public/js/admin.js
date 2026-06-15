@@ -28,7 +28,7 @@ function switchTab(event, sectionId, loadDataFunc) {
 
 async function cargarEspecialidades() {
   const tbody = document.getElementById('tabla-especialidades');
-  tbody.innerHTML = '<tr><td colspan="4">Cargando...</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="4"><div class="spinner"></div> Cargando...</td></tr>';
   try {
     const data = await api.get('/admin/especialidades');
     tbody.innerHTML = '';
@@ -81,10 +81,15 @@ async function cargarMedicos() {
   } catch (err) { alert(err.message); }
 }
 
-async function cargarPacientes() {
+let pagePacientes = 1;
+async function cargarPacientes(page = 1) {
+  if (typeof page !== 'number') page = 1;
+  pagePacientes = page;
   const tbody = document.getElementById('tabla-pacientes');
+  tbody.innerHTML = '<tr><td colspan="4"><div class="spinner"></div> Cargando...</td></tr>';
   try {
-    const data = await api.get('/pacientes');
+    const res = await api.get(`/pacientes?page=${page}&limit=10`);
+    const data = res.data || res;
     tbody.innerHTML = '';
     data.forEach(pac => {
       let badgeText = 'ACTIVO';
@@ -114,12 +119,14 @@ async function cargarPacientes() {
         </tr>
       `;
     });
+    if (res.pages) renderPaginacion('paginacion-pacientes', res.page, res.pages, cargarPacientes);
+    else document.getElementById('paginacion-pacientes').innerHTML = '';
   } catch (err) { alert(err.message); }
 }
 
 async function levantarSuspension(id) {
   if(confirm('¿Levantar suspensión de este paciente?')) {
-    try { await api.put(`/admin/pacientes/${id}/levantar-suspension`); cargarPacientes(); } 
+    try { await api.put(`/admin/pacientes/${id}/levantar-suspension`); cargarPacientes(pagePacientes); } 
     catch(err) { alert(err.message); }
   }
 }
@@ -142,7 +149,7 @@ async function togglePacienteStatus(id, newStatus) {
   if(confirm(`¿Deseas ${newStatus ? 'activar' : 'inactivar'} a este paciente?`)) {
     try {
       await api.put(`/admin/pacientes/${id}/estado`, { activo: newStatus });
-      cargarPacientes();
+      cargarPacientes(pagePacientes);
     } catch(err) { alert(err.message); }
   }
 }
@@ -151,7 +158,7 @@ async function eliminarPacienteFisico(id) {
   if (confirm('¡PELIGRO! ¿Estás totalmente seguro de que deseas ELIMINAR FÍSICAMENTE a este paciente y a su usuario asociado? Esto borrará sus turnos e historia clínica para siempre. No se puede deshacer.')) {
     try {
       await api.delete('/admin/pacientes/' + id);
-      cargarPacientes();
+      cargarPacientes(pagePacientes);
     } catch(err) {
       alert(err.message);
     }
@@ -247,7 +254,10 @@ window.copiarPassword = () => {
 };
 
 // --- AUDITORÍA ---
-async function cargarAuditoria() {
+let pageAuditoria = 1;
+async function cargarAuditoria(page = 1) {
+  if (typeof page !== 'number') page = 1;
+  pageAuditoria = page;
   const tbody = document.getElementById('tabla-auditoria');
   const desde = document.getElementById('filtro-auditoria-desde').value;
   const hasta = document.getElementById('filtro-auditoria-hasta').value;
@@ -257,16 +267,18 @@ async function cargarAuditoria() {
     return;
   }
   
-  let url = '/admin/auditoria?';
+  let url = `/admin/auditoria?page=${page}&limit=10&`;
   if (desde) url += 'fecha_desde=' + desde + '&';
   if (hasta) url += 'fecha_hasta=' + hasta;
   
-  tbody.innerHTML = '<tr><td colspan="4">Cargando...</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="4"><div class="spinner"></div> Cargando...</td></tr>';
   try {
-    const data = await api.get(url);
+    const res = await api.get(url);
+    const data = res.data || res;
     tbody.innerHTML = '';
     if(data.length === 0) {
       tbody.innerHTML = '<tr><td colspan="4">No hay logs en este rango de fechas.</td></tr>';
+      document.getElementById('paginacion-auditoria').innerHTML = '';
       return;
     }
     
@@ -289,12 +301,70 @@ async function cargarAuditoria() {
 
       tbody.innerHTML += '<tr><td>' + fechaLocal + '</td><td>' + (log.admin_email || 'Sistema') + '</td><td>' + log.accion + ' en ' + log.tabla_afectada + '</td><td style="font-size:0.9rem; color:var(--text-secondary)">' + detalles + '</td></tr>';
     });
+    if (res.pages) renderPaginacion('paginacion-auditoria', res.page, res.pages, cargarAuditoria);
+    else document.getElementById('paginacion-auditoria').innerHTML = '';
   } catch(err) { alert(err.message); }
 }
 
-document.getElementById('btn-filtrar-auditoria').addEventListener('click', cargarAuditoria);
+document.getElementById('btn-filtrar-auditoria').addEventListener('click', () => cargarAuditoria(1));
 document.getElementById('btn-limpiar-auditoria').addEventListener('click', () => {
   document.getElementById('filtro-auditoria-desde').value = '';
   document.getElementById('filtro-auditoria-hasta').value = '';
-  cargarAuditoria();
+  cargarAuditoria(1);
 });
+
+document.getElementById('btn-exportar-csv').addEventListener('click', () => {
+  const desde = document.getElementById('filtro-auditoria-desde').value;
+  const hasta = document.getElementById('filtro-auditoria-hasta').value;
+
+  const API_URL = window.ENV_API_URL || 'https://sistema-salud-goya00.onrender.com/api';
+  let url = `${API_URL}/admin/auditoria/exportar?`;
+  if (desde) url += 'fecha_desde=' + desde + '&';
+  if (hasta) url += 'fecha_hasta=' + hasta;
+
+  const token = sessionStorage.getItem('token');
+  fetch(url, { headers: { 'Authorization': 'Bearer ' + token } })
+    .then(res => {
+      if (!res.ok) throw new Error('Error al exportar (status ' + res.status + ')');
+      return res.blob();
+    })
+    .then(blob => {
+      const fechaHoy = new Date().toISOString().slice(0, 10);
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `auditoria_${fechaHoy}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(a.href);
+    })
+    .catch(err => alert('Error al exportar: ' + err.message));
+});
+
+function renderPaginacion(containerId, currentPage, totalPages, fetchFn) {
+  const container = document.getElementById(containerId);
+  container.innerHTML = '';
+  if (totalPages <= 1) return;
+
+  if (currentPage > 1) {
+    const btn = document.createElement('button');
+    btn.className = 'btn';
+    btn.innerText = 'Anterior';
+    btn.onclick = () => fetchFn(currentPage - 1);
+    container.appendChild(btn);
+  }
+
+  const span = document.createElement('span');
+  span.style.padding = '0.5rem 1rem';
+  span.style.color = 'var(--text-primary)';
+  span.innerText = `Página ${currentPage} de ${totalPages}`;
+  container.appendChild(span);
+
+  if (currentPage < totalPages) {
+    const btn = document.createElement('button');
+    btn.className = 'btn';
+    btn.innerText = 'Siguiente';
+    btn.onclick = () => fetchFn(currentPage + 1);
+    container.appendChild(btn);
+  }
+}

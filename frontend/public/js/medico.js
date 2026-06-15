@@ -139,7 +139,7 @@ async function abrirHistorial(pacienteId, turnoId) {
   turnoSeleccionadoParaHistorial = turnoId;
   
   // Limpiar la vista
-  document.getElementById('historial-contenido').innerHTML = 'Cargando...';
+  document.getElementById('historial-contenido').innerHTML = '<div class="spinner"></div> Cargando...';
   document.getElementById('archivos-lista').innerHTML = '';
   document.getElementById('upload-pdf-input').value = '';
   document.getElementById('visor-historial-modal').classList.remove('hidden');
