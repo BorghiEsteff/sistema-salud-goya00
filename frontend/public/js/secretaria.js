@@ -25,6 +25,8 @@ async function cargarAgenda() {
       tbody.innerHTML += `
         <tr>
           <td>${turno.hora_inicio.substr(0,5)}</td>
+          <td>${turno.paciente_nombre} ${turno.paciente_apellido}</td>
+          <td>${turno.medico_nombre} ${turno.medico_apellido}</td>
           <td><span class="badge ${turno.estado}">${turno.estado}</span></td>
           <td>
             ${turno.estado === 'solicitado' ? `
@@ -37,24 +39,67 @@ async function cargarAgenda() {
         </tr>
       `;
     });
-  } catch (err) { alert(err.message); }
+  } catch (err) { showGlobalError(err.message); }
+}
+
+function showGlobalError(message, type = 'error') {
+  const alert = document.getElementById('global-alert');
+  alert.textContent = message;
+  alert.className = `alert alert-${type === 'error' ? 'error' : 'success'}`;
+  alert.classList.remove('hidden');
+  setTimeout(() => alert.classList.add('hidden'), 5000);
+}
+
+function visualConfirm(titulo, mensaje) {
+  return new Promise((resolve) => {
+    document.getElementById('confirm-title').textContent = titulo;
+    document.getElementById('confirm-message').textContent = mensaje || '¿Estás seguro?';
+    const modal = document.getElementById('confirm-modal');
+    modal.classList.remove('hidden');
+    
+    document.getElementById('confirm-btn-ok').onclick = () => {
+      modal.classList.add('hidden');
+      resolve(true);
+    };
+    document.getElementById('confirm-btn-cancel').onclick = () => {
+      modal.classList.add('hidden');
+      resolve(false);
+    };
+  });
 }
 
 async function cambiarEstado(id, nuevoEstado) {
-  if(confirm(`¿Marcar este turno como ${nuevoEstado}?`)) {
+  const confirmado = await visualConfirm(`Confirmar cambio`, `¿Desea marcar este turno como ${nuevoEstado}?`);
+  if(confirmado) {
     try {
       await api.put(`/turnos/${id}/estado`, { estado: nuevoEstado });
+      showGlobalError(`Turno marcado como ${nuevoEstado}`, 'success');
       cargarAgenda();
-    } catch(err) { alert(err.message); }
+    } catch(err) { showGlobalError(err.message); }
   }
 }
 
-async function cancelarTurno(id) {
-  const motivo = prompt('Motivo de cancelación:');
-  if(motivo !== null) {
-    try {
-      await api.put(`/turnos/${id}/cancelar`, { motivo_cancelacion: motivo });
-      cargarAgenda();
-    } catch(err) { alert(err.message); }
-  }
+let turnoACancelar = null;
+
+function cancelarTurno(id) {
+  turnoACancelar = id;
+  document.getElementById('motivo-cancelacion-input').value = '';
+  document.getElementById('cancelar-modal').classList.remove('hidden');
+}
+
+function cerrarModalCancelar() {
+  document.getElementById('cancelar-modal').classList.add('hidden');
+  turnoACancelar = null;
+}
+
+async function confirmarCancelacion() {
+  const motivo = document.getElementById('motivo-cancelacion-input').value.trim();
+  if(!motivo) return showGlobalError('Debe ingresar un motivo de cancelación.');
+  
+  try {
+    await api.put(`/turnos/${turnoACancelar}/cancelar`, { motivo_cancelacion: motivo });
+    showGlobalError('Turno cancelado exitosamente.', 'success');
+    cerrarModalCancelar();
+    cargarAgenda();
+  } catch(err) { showGlobalError(err.message); }
 }

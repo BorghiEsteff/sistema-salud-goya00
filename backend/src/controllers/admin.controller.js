@@ -139,10 +139,26 @@ async function getAuditoria(req, res, next) {
       query += ` AND l.creado_en::date <= $${params.length}`;
     }
     
-    query += ` ORDER BY l.creado_en DESC LIMIT 100`;
+    query += ` ORDER BY l.creado_en DESC`;
     
-    const result = await db.query(query, params);
-    res.json(result.rows);
+    if (req.query.page) {
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 20;
+      const offset = (page - 1) * limit;
+
+      const countRes = await db.query(`SELECT COUNT(*) FROM (${query}) AS subquery`, params);
+      const total = parseInt(countRes.rows[0].count);
+
+      params.push(limit, offset);
+      query += ` LIMIT $${params.length - 1} OFFSET $${params.length}`;
+
+      const result = await db.query(query, params);
+      res.json({ data: result.rows, total, page, pages: Math.ceil(total / limit) });
+    } else {
+      query += ` LIMIT 100`;
+      const result = await db.query(query, params);
+      res.json(result.rows);
+    }
   } catch (err) { next(err); }
 }
 
@@ -244,9 +260,93 @@ async function limpiarEspecialidadesVacias(req, res, next) {
   }
 }
 
+// --- EXPORTACIÓN CSV ---
+async function exportarAuditoriaCSV(req, res, next) {
+  try {
+    const { fecha_desde, fecha_hasta } = req.query;
+
+    if (fecha_desde && isNaN(Date.parse(fecha_desde))) {
+      return res.status(400).json({ error: 'Formato de fecha_desde inválido' });
+    }
+    if (fecha_hasta && isNaN(Date.parse(fecha_hasta))) {
+      return res.status(400).json({ error: 'Formato de fecha_hasta inválido' });
+    }
+
+    let query = `
+      SELECT
+        l.id,
+        l.creado_en,
+        u.email AS admin_email,
+        l.accion,
+        l.tabla_afectada,
+        l.campo_modificado,
+        l.valor_anterior,
+        l.valor_nuevo,
+        l.ip_address,
+        CASE
+          WHEN l.tabla_afectada = 'medicos' THEN (SELECT nombre || ' ' || apellido FROM medicos WHERE id::text = l.registro_id::text)
+          WHEN l.tabla_afectada = 'pacientes' THEN (SELECT nombre || ' ' || apellido FROM pacientes WHERE id::text = l.registro_id::text)
+          WHEN l.tabla_afectada = 'especialidades' THEN (SELECT nombre FROM especialidades WHERE id::text = l.registro_id::text)
+          ELSE NULL
+        END AS nombre_afectado
+      FROM logs_auditoria l
+      LEFT JOIN usuarios u ON l.usuario_id = u.id
+      WHERE 1=1
+    `;
+    const params = [];
+
+    if (fecha_desde) {
+      params.push(fecha_desde);
+      query += ` AND l.creado_en::date >= $${params.length}`;
+    }
+    if (fecha_hasta) {
+      params.push(fecha_hasta);
+      query += ` AND l.creado_en::date <= $${params.length}`;
+    }
+    query += ` ORDER BY l.creado_en DESC`;
+
+    const result = await db.query(query, params);
+
+    // Construcción del CSV
+    const cabeceras = ['ID', 'Fecha y Hora', 'Admin', 'Accion', 'Tabla', 'Campo', 'Valor Anterior', 'Valor Nuevo', 'IP', 'Nombre Afectado'];
+
+    const escaparCSV = (val) => {
+      if (val === null || val === undefined) return '';
+      const str = String(val);
+      if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+        return '"' + str.replace(/"/g, '""') + '"';
+      }
+      return str;
+    };
+
+    const filas = result.rows.map(log => [
+      escaparCSV(log.id),
+      escaparCSV(new Date(log.creado_en).toLocaleString('es-AR')),
+      escaparCSV(log.admin_email || 'Sistema'),
+      escaparCSV(log.accion),
+      escaparCSV(log.tabla_afectada),
+      escaparCSV(log.campo_modificado),
+      escaparCSV(log.valor_anterior),
+      escaparCSV(log.valor_nuevo),
+      escaparCSV(log.ip_address),
+      escaparCSV(log.nombre_afectado)
+    ].join(','));
+
+    const csvContent = [cabeceras.join(','), ...filas].join('\n');
+    const fechaArchivo = new Date().toISOString().slice(0, 10);
+    const filename = `auditoria_${fechaArchivo}.csv`;
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    // BOM para que Excel reconozca UTF-8 correctamente
+    res.send('\uFEFF' + csvContent);
+
+  } catch (err) { next(err); }
+}
+
 module.exports = {
   getEspecialidades, createEspecialidad, deleteEspecialidad, limpiarEspecialidadesVacias,
   getMedicos, createMedico, toggleMedicoStatus,
   togglePacienteStatus, levantarSuspension, deletePacienteFisico,
-  getAuditoria
+  getAuditoria, exportarAuditoriaCSV
 };

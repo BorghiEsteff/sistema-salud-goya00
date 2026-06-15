@@ -64,8 +64,21 @@ async function updatePerfil(req, res, next) {
 // Listado de todos los pacientes (Solo Admin y Secretaría)
 async function getAllPacientes(req, res, next) {
   try {
-    const result = await db.query('SELECT p.*, u.email FROM pacientes p JOIN usuarios u ON p.usuario_id = u.id ORDER BY p.activo DESC, p.apellido ASC');
-    res.json(result.rows);
+    if (req.query.page) {
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 10;
+      const offset = (page - 1) * limit;
+
+      const countRes = await db.query('SELECT COUNT(*) FROM pacientes');
+      const total = parseInt(countRes.rows[0].count);
+
+      const result = await db.query('SELECT p.*, u.email FROM pacientes p JOIN usuarios u ON p.usuario_id = u.id ORDER BY p.activo DESC, p.apellido ASC LIMIT $1 OFFSET $2', [limit, offset]);
+      
+      res.json({ data: result.rows, total, page, pages: Math.ceil(total / limit) });
+    } else {
+      const result = await db.query('SELECT p.*, u.email FROM pacientes p JOIN usuarios u ON p.usuario_id = u.id ORDER BY p.activo DESC, p.apellido ASC');
+      res.json(result.rows);
+    }
   } catch (err) { next(err); }
 }
 

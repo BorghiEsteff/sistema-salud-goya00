@@ -130,7 +130,8 @@ salud-goya/
 | `PUT` | `/api/admin/pacientes/:id/estado` | Activar o inactivar paciente | Admin |
 | `PUT` | `/api/admin/pacientes/:id/levantar-suspension`| Levantar suspensión automática de un paciente | Admin |
 | `DELETE` | `/api/admin/pacientes/:id` | Eliminar paciente del sistema | Admin |
-| `GET` | `/api/admin/auditoria` | Ver logs de auditoría | Admin |
+| `GET` | `/api/admin/auditoria` | Ver logs de auditoría (soporta `?page` y `?limit`) | Admin |
+| `GET` | `/api/admin/auditoria/exportar` | Descargar logs de auditoría en formato CSV | Admin |
 | **Auth** | `/api/auth` | | |
 | `POST` | `/api/auth/login` | Autenticación y generación de JWT | Público |
 | **Archivos** | `/api/archivos` | | |
@@ -164,19 +165,25 @@ salud-goya/
 # SECCIÓN 3 – Diseño UI/UX
 
 ## 3.1 Principios de Diseño
-- **Mobile First:** Componentes diseñados para colapsar suavemente en pantallas pequeñas.
-- **Minimalismo y Contraste:** Uso de fondos oscuros (Dark Mode nativo/opcional) con acentos vibrantes para llamar la atención a las acciones primarias (Primary Buttons).
-- **Feedback visual:** Uso exclusivo de notificaciones dinámicas (toasts) y modales custom (`visualConfirm`, `showGlobalError`) para advertencias y errores, eliminando el uso intrusivo de `alert()` o `prompt()` nativos del navegador. Cambios de color (rojo para peligro, verde para éxito) en botones de acción y etiquetas de estado.
+- **Mobile First y Accesibilidad:** Componentes diseñados para colapsar suavemente en pantallas pequeñas, con navegación 100% por teclado (`focus-visible`) y soporte para ajuste dinámico de tamaño de fuente.
+- **Minimalismo y Esquema Claro (Modo Salud):** Uso de fondos claros y limpios (`#F8FAFC`, `#FFFFFF`) con estilo "glassmorphism", sombras suaves y acentos vibrantes para llamar la atención a las acciones primarias (Primary Buttons).
+- **Feedback visual:** Uso exclusivo de notificaciones dinámicas (toasts) y modales custom (`visualConfirm`, `showGlobalError`) para advertencias y errores, eliminando el uso intrusivo de `alert()` o `prompt()` nativos del navegador. Cambios de color semánticos (rojo para peligro, verde para éxito, menta para acentos). Modales rediseñados tipo tarjeta central con desenfoque de fondo.
 
-## 3.2 Paleta de Colores
+## 3.2 Paleta de Colores (Actualizada al Modo Salud)
+*Nota: Los nombres originales de variables oscuras se mantuvieron por retrocompatibilidad con el código JS, pero sus valores fueron actualizados al nuevo esquema claro.*
+
 | Token | Valor | Uso |
 |---|---|---|
-| `--bg-dark` | `#0f172a` | Fondo principal de la aplicación |
-| `--surface-dark` | `#1e293b` | Tarjetas, formularios y modales |
-| `--primary-color` | `#3b82f6` | Botones principales, enlaces |
-| `--danger-color` | `#ef4444` | Acciones destructivas (Eliminar, Inactivar) |
-| `--success-color` | `#10b981` | Confirmaciones y estados Activos |
-| `--text-primary` | `#f8fafc` | Texto principal |
+| `--background-dark` | `#F8FAFC` | Fondo principal de la aplicación (claro) |
+| `--surface-dark` | `#FFFFFF` | Tarjetas, formularios y modales (blanco) |
+| `--primary-color` | `#2563EB` | Botones principales, enlaces |
+| `--secondary-color` | `#0EA5A4` | Acentos secundarios |
+| `--accent-color` | `#14B8A6` | Detalles y tokens activos |
+| `--danger-color` | `#EF4444` | Acciones destructivas (Eliminar, Inactivar) |
+| `--success-color` | `#22C55E` | Confirmaciones y estados Activos |
+| `--warning-color` | `#F59E0B` | Advertencias |
+| `--text-primary` | `#1E293B` | Texto principal oscuro |
+| `--text-secondary` | `#64748B` | Texto secundario o etiquetas |
 
 ## 3.3 Flujo de Navegación
 El sistema se encuentra dividido en dos portales independientes para mejorar la seguridad y la experiencia de usuario:
@@ -272,3 +279,76 @@ Se implementaron controles avanzados en el dashboard administrativo para facilit
 3. **Historias Clínicas**: Carga de evoluciones médicas y reportes.
 4. **Carga de Archivos Adjuntos**: Integración con Multer y Cloudinary para recetas/estudios en PDF e Imágenes.
 5. **Separación de Portales**: Refactor del frontend para independizar la experiencia de Pacientes del Staff Médico.
+
+## 6.4 Rediseño Visual y UI/UX (Modo Salud)
+Se llevó a cabo una modernización completa de la interfaz sin alterar la lógica interna de Javascript ni el backend.
+- **Sprint 1 (Design Tokens):** Migración total desde un esquema oscuro hacia un esquema "Salud" (fondo claro, textos oscuros, acentos en azul y menta).
+- **Sprint 2 (Formularios):** Estandarización de inputs (`.form-control`) y botones (`.btn`).
+- **Sprint 3 (Layout y Cards):** Reestructuración de todos los dashboards con diseño basado en tarjetas (cards), uso de sidebar con iconos y tablas responsivas.
+- **Sprint 4 (Modales y Alertas):** Adopción de "glassmorphism" en modales y creación de clases para validación visual de errores y toasts.
+- **Sprint 5 (Accesibilidad y Responsive):** Implementación de control dinámico de tamaño de fuente, diseño adaptativo real en mobile, focus-visible para navegación por teclado e indicadores de carga (`spinner`) integrados dinámicamente.
+
+## 6.5 Mejoras Funcionales — Grupo B (Sprints 6 a 9)
+
+Se implementó un segundo ciclo de mejoras centrado en funcionalidades del sistema, sin alterar la lógica de negocio existente.
+
+### Sprint 6 — Configuración de Subdominios para Vercel
+Se creó el archivo `vercel.json` en la raíz del proyecto para separar el acceso a los dos portales a nivel de infraestructura en el despliegue en Vercel:
+- El subdominio `staff.*` redirige a `index.html` (portal interno de médicos, secretaría y admin).
+- El dominio raíz (`/`) redirige a `portal.html` (portal de pacientes).
+- Las rutas `/api/*` se dirigen al servidor Node.js (`backend/index.js`).
+
+**Archivos modificados:** `vercel.json` *(nuevo)*.
+
+---
+
+### Sprint 7 — Activación Real del Rol Secretaría
+Se completó la funcionalidad del Dashboard de Secretaría, que hasta este sprint sólo tenía una interfaz parcial.
+
+**Backend:**
+- `turnos.controller.js` → El endpoint `GET /api/turnos` fue actualizado con `JOIN` a las tablas `pacientes`, `medicos` y `especialidades`. Ahora la respuesta incluye los campos `paciente_nombre`, `paciente_apellido`, `medico_nombre`, `medico_apellido` y `especialidad_nombre` sin necesidad de hacer consultas adicionales desde el frontend.
+
+**Frontend:**
+- `dashboard-secretaria.html` → Se añadieron las columnas "Paciente" y "Médico" a la tabla de agenda. Se incorporaron los contenedores de modales (confirmación visual y cancelación de turno).
+- `secretaria.js` → Eliminación completa de las llamadas nativas `alert()` y `prompt()`. Reemplazadas por:
+  - `showGlobalError(message, type)`: notificación tipo toast no bloqueante.
+  - `visualConfirm(titulo, mensaje)`: modal de confirmación visual asíncrono (basado en `Promise`).
+  - Modal dedicado para ingresar el motivo de cancelación de turno.
+
+**Archivos modificados:** `turnos.controller.js`, `dashboard-secretaria.html`, `secretaria.js`.
+
+---
+
+### Sprint 8 — Paginación en Listados Extensos
+Se incorporó paginación opcional con `LIMIT` / `OFFSET` en los tres endpoints de listado principales. La implementación es **retrocompatible**: si no se envía `?page=N`, el endpoint retorna el array completo (comportamiento anterior). Si se envía `?page=N&limit=N`, retorna el objeto `{ data: [], total, page, pages }`.
+
+**Backend:**
+- `pacientes.controller.js` → `getAllPacientes` acepta `?page` y `?limit`.
+- `admin.controller.js` → `getAuditoria` acepta `?page` y `?limit`. El conteo total se calcula sobre la subquery con filtros de fecha aplicados.
+- `turnos.controller.js` → `getTurnos` acepta `?page` y `?limit`. El conteo total respeta los filtros de rol y fecha activos.
+
+**Frontend (`admin.js`):**
+- `cargarPacientes(page)` y `cargarAuditoria(page)` ahora aceptan número de página.
+- Se añadió la función utilitaria `renderPaginacion(containerId, currentPage, totalPages, fetchFn)` que genera dinámicamente los botones "Anterior", indicador "Página X de Y" y "Siguiente".
+- Los contenedores `<div id="paginacion-pacientes">` y `<div id="paginacion-auditoria">` fueron añadidos al HTML debajo de cada tabla.
+- Las acciones sobre filas (levantar suspensión, toggle de estado, eliminar) recuerdan la página actual y la recargan al volver.
+
+**Archivos modificados:** `pacientes.controller.js`, `admin.controller.js`, `turnos.controller.js`, `dashboard-admin.html`, `admin.js`.
+
+---
+
+### Sprint 9 — Exportación de Logs de Auditoría a CSV
+Se habilitó la descarga de un reporte histórico del log de auditoría en formato CSV, compatible con Microsoft Excel y LibreOffice Calc.
+
+**Backend:**
+- `admin.controller.js` → Nueva función `exportarAuditoriaCSV`. Ejecuta la misma query que `getAuditoria` (con los mismos filtros opcionales de fecha), construye el CSV en memoria con escapado correcto de caracteres especiales (comas, comillas, saltos de línea) e incluye un **BOM UTF-8** (`\uFEFF`) para que Excel reconozca la codificación correctamente.
+  - Cabeceras: `ID`, `Fecha y Hora`, `Admin`, `Accion`, `Tabla`, `Campo`, `Valor Anterior`, `Valor Nuevo`, `IP`, `Nombre Afectado`.
+  - El archivo se nombra automáticamente `auditoria_YYYY-MM-DD.csv`.
+- `admin.routes.js` → Nueva ruta `GET /api/admin/auditoria/exportar` (registrada antes de la ruta base `/auditoria`).
+
+**Frontend:**
+- `dashboard-admin.html` → Se añadió el botón **⬇ Exportar CSV** junto a los filtros de fecha en el panel de Auditoría.
+- `admin.js` → Handler del botón: realiza un `fetch` autenticado con el token de `sessionStorage`, recibe el `Blob` CSV, crea una URL temporal (`URL.createObjectURL`) y la asigna a un `<a>` invisible para forzar la descarga. Los filtros de fecha activos al momento de la descarga son respetados.
+
+**Archivos modificados:** `admin.controller.js`, `admin.routes.js`, `dashboard-admin.html`, `admin.js`.
+

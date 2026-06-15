@@ -12,10 +12,10 @@
     <aside class="sidebar">
       <h2>🏥 Salud Goya</h2>
       <ul class="nav-links">
-        <li><a href="#" class="active" id="nav-especialidades">Especialidades</a></li>
-        <li><a href="#" id="nav-medicos">Médicos</a></li>
-        <li><a href="#" id="nav-pacientes">Pacientes / Suspensiones</a></li>
-        <li><a href="#" id="nav-auditoria">Logs de Auditoría</a></li>
+        <li><a href="#" class="active" id="nav-especialidades">💊 Especialidades</a></li>
+        <li><a href="#" id="nav-medicos">👨‍⚕️ Médicos</a></li>
+        <li><a href="#" id="nav-pacientes">🧑‍🤝‍🧑 Pacientes / Suspensiones</a></li>
+        <li><a href="#" id="nav-auditoria">📋 Logs de Auditoría</a></li>
       </ul>
       <button class="logout-btn" onclick="window.logout()">Cerrar Sesión</button>
     </aside>
@@ -24,8 +24,15 @@
     <main class="main-content">
       <header class="header">
         <h1>Panel de Administración</h1>
-        <div class="user-profile">
-          <span class="badge" style="background:var(--primary-color);color:#fff">Admin</span>
+        <div style="display: flex; align-items: center; gap: 20px;">
+          <div class="font-control" style="display: flex; align-items: center; gap: 5px;" title="Ajustar tamaño de letra">
+            <span style="font-size: 0.8rem; color: var(--text-secondary);">A-</span>
+            <input type="range" class="font-slider-input" min="14" max="22" value="16" style="width: 70px;">
+            <span style="font-size: 1.1rem; color: var(--text-secondary);">A+</span>
+          </div>
+          <div class="user-profile">
+            <span class="badge" style="background:var(--primary-color);color:#fff">Admin</span>
+          </div>
         </div>
       </header>
 
@@ -95,6 +102,7 @@
             <tbody id="tabla-pacientes"></tbody>
           </table>
         </div>
+        <div id="paginacion-pacientes" class="pagination-controls" style="display:flex; justify-content:center; gap:10px; margin-top:15px; padding-bottom:15px;"></div>
       </section>
       <!-- Section: Auditoria -->
       <section id="section-auditoria" class="card" style="display: none;">
@@ -105,6 +113,7 @@
             <input type="date" id="filtro-auditoria-hasta" class="form-control" style="display:inline-block; width:auto; padding:5px; border-radius:5px;">
             <button class="btn btn-secondary" id="btn-filtrar-auditoria">Filtrar</button>
             <button class="btn" id="btn-limpiar-auditoria" style="background:none; border:1px solid rgba(255,255,255,0.2); color:#fff; margin-left:5px;">Limpiar</button>
+            <button class="btn" id="btn-exportar-csv" style="background:var(--success-color, #10b981); color:#fff; margin-left:5px;">⬇ Exportar CSV</button>
           </div>
         </div>
         <div class="table-container">
@@ -120,6 +129,7 @@
             <tbody id="tabla-auditoria"></tbody>
           </table>
         </div>
+        <div id="paginacion-auditoria" class="pagination-controls" style="display:flex; justify-content:center; gap:10px; margin-top:15px; padding-bottom:15px;"></div>
       </section>
       
       <!-- Modales -->
@@ -128,12 +138,12 @@
           <h3>Nueva Especialidad</h3>
           <form id="form-especialidad" onsubmit="event.preventDefault();">
             <div class="form-group">
-              <label>Nombre</label>
-              <input type="text" id="esp-nombre" required>
+              <label for="esp-nombre">Nombre</label>
+              <input type="text" id="esp-nombre" class="form-control" required>
             </div>
             <div class="form-group">
-              <label>Descripción</label>
-              <textarea id="esp-desc" rows="3"></textarea>
+              <label for="esp-desc">Descripción</label>
+              <textarea id="esp-desc" class="form-control" rows="3"></textarea>
             </div>
             <div style="display: flex; gap: 10px; margin-top: 1rem;">
               <button type="submit" class="btn btn-primary" style="flex: 1;">Guardar</button>
@@ -148,19 +158,19 @@
           <h3>Registrar Nuevo Médico</h3>
           <form id="form-medico" onsubmit="event.preventDefault();">
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-              <div class="form-group"><label>Nombre</label><input type="text" id="med-nombre" required></div>
-              <div class="form-group"><label>Apellido</label><input type="text" id="med-apellido" required></div>
+              <div class="form-group"><label for="med-nombre">Nombre</label><input type="text" id="med-nombre" class="form-control" required></div>
+              <div class="form-group"><label for="med-apellido">Apellido</label><input type="text" id="med-apellido" class="form-control" required></div>
             </div>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top:10px;">
-              <div class="form-group"><label>Email</label><input type="email" id="med-email" required></div>
-              <div class="form-group"><label>Matrícula</label><input type="text" id="med-matricula" required></div>
+              <div class="form-group"><label for="med-email">Email</label><input type="email" id="med-email" class="form-control" required></div>
+              <div class="form-group"><label for="med-matricula">Matrícula</label><input type="text" id="med-matricula" class="form-control" required></div>
             </div>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top:10px;">
               <div class="form-group">
-                <label>Especialidad</label>
-                <select id="med-especialidad" required><option value="">Cargando...</option></select>
+                <label for="med-especialidad">Especialidad</label>
+                <select id="med-especialidad" class="form-control" required><option value="">Cargando...</option></select>
               </div>
-              <div class="form-group"><label>Teléfono</label><input type="text" id="med-telefono" required></div>
+              <div class="form-group"><label for="med-telefono">Teléfono</label><input type="text" id="med-telefono" class="form-control" required></div>
             </div>
             <div style="display: flex; gap: 10px; margin-top: 1.5rem;">
               <button type="submit" class="btn btn-primary" id="btn-guardar-medico" style="flex: 1;">Generar y Guardar</button>
@@ -183,5 +193,6 @@
   </div>
   <script src="js/api.js"></script>
   <script src="js/admin.js"></script>
+  <script src="js/accessibility.js"></script>
 </body>
 </html>

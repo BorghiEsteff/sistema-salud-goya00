@@ -140,26 +140,41 @@ async function cambiarEstado(req, res, next) {
 async function getTurnos(req, res, next) {
   try {
     const { fecha, medico_id, paciente_id, estado } = req.query;
-    let query = 'SELECT * FROM turnos WHERE activo = TRUE';
+    let query = 'SELECT t.*, p.nombre as paciente_nombre, p.apellido as paciente_apellido, m.nombre as medico_nombre, m.apellido as medico_apellido, e.nombre as especialidad_nombre FROM turnos t JOIN pacientes p ON t.paciente_id = p.id JOIN medicos m ON t.medico_id = m.id LEFT JOIN especialidades e ON t.especialidad_id = e.id WHERE t.activo = TRUE';
     const values = [];
     let counter = 1;
 
-    if (fecha) { query += ` AND fecha_turno = $${counter++}`; values.push(fecha); }
-    if (medico_id) { query += ` AND medico_id = $${counter++}`; values.push(medico_id); }
-    if (estado) { query += ` AND estado = $${counter++}`; values.push(estado); }
+    if (fecha) { query += ` AND t.fecha_turno = $${counter++}`; values.push(fecha); }
+    if (medico_id) { query += ` AND t.medico_id = $${counter++}`; values.push(medico_id); }
+    if (estado) { query += ` AND t.estado = $${counter++}`; values.push(estado); }
 
     if (req.usuario.rol === 'paciente') {
-      query += ` AND paciente_id = $${counter++}`; values.push(req.usuario.paciente_id);
+      query += ` AND t.paciente_id = $${counter++}`; values.push(req.usuario.paciente_id);
     } else if (req.usuario.rol === 'medico') {
-      query += ` AND medico_id = $${counter++}`; values.push(req.usuario.medico_id);
+      query += ` AND t.medico_id = $${counter++}`; values.push(req.usuario.medico_id);
     } else if (paciente_id) {
-      query += ` AND paciente_id = $${counter++}`; values.push(paciente_id);
+      query += ` AND t.paciente_id = $${counter++}`; values.push(paciente_id);
     }
 
-    query += ' ORDER BY fecha_turno DESC, hora_inicio ASC';
+    query += ' ORDER BY t.fecha_turno DESC, t.hora_inicio ASC';
 
-    const result = await db.query(query, values);
-    res.json(result.rows);
+    if (req.query.page) {
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 10;
+      const offset = (page - 1) * limit;
+      
+      const countRes = await db.query(`SELECT COUNT(*) FROM (${query}) AS subquery`, values);
+      const total = parseInt(countRes.rows[0].count);
+      
+      values.push(limit, offset);
+      query += ` LIMIT $${values.length - 1} OFFSET $${values.length}`;
+      
+      const result = await db.query(query, values);
+      res.json({ data: result.rows, total, page, pages: Math.ceil(total / limit) });
+    } else {
+      const result = await db.query(query, values);
+      res.json(result.rows);
+    }
   } catch (err) { next(err); }
 }
 
