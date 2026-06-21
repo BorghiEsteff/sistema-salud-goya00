@@ -1,0 +1,41 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "backend/index.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "frontend/public/**",
+      "use": "@vercel/static"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/backend/index.js"
+    },
+    {
+      "src": "/",
+      "has": [
+        { "type": "host", "value": "(?<subdomain>staff)\\..+" }
+      ],
+      "dest": "/frontend/public/index.html"
+    },
+    {
+      "src": "/(.*)",
+      "has": [
+        { "type": "host", "value": "(?<subdomain>staff)\\..+" }
+      ],
+      "dest": "/frontend/public/$1"
+    },
+    {
+      "src": "/",
+      "dest": "/frontend/public/portal.html"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/frontend/public/$1"
+    }
+  ]
+}

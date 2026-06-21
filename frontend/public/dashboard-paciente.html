@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Paciente - Salud Goya</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div class="dashboard-container">
+    <aside class="sidebar">
+      <h2>🏥 Salud Goya</h2>
+      <ul class="nav-links">
+        <li><a href="#" class="active" id="nav-mis-turnos">📅 Mis Turnos</a></li>
+        <li><a href="#" id="nav-historia">🩺 Mi Historia Clínica</a></li>
+        <li><a href="#" id="nav-reservar">➕ Reservar Turno</a></li>
+      </ul>
+      <button class="logout-btn" onclick="window.logout()">Cerrar Sesión</button>
+    </aside>
+    <main class="main-content">
+      <header class="header">
+        <h1>Panel del Paciente</h1>
+        <div style="display: flex; align-items: center; gap: 20px;">
+          <div class="font-control" style="display: flex; align-items: center; gap: 5px;" title="Ajustar tamaño de letra">
+            <span style="font-size: 0.8rem; color: var(--text-secondary);">A-</span>
+            <input type="range" class="font-slider-input" min="14" max="22" value="16" style="width: 70px;">
+            <span style="font-size: 1.1rem; color: var(--text-secondary);">A+</span>
+          </div>
+          <div class="user-profile" style="display:flex; align-items:center; gap:10px;">
+            <div style="text-align:right; line-height:1.2;">
+              <div id="paciente-nombre-span" style="color:var(--text-primary); font-weight:600;"></div>
+              <div id="paciente-dni-span" style="color:var(--text-secondary); font-size:0.85rem;"></div>
+            </div>
+            <span class="badge" style="background:var(--secondary-color);color:#fff">Paciente</span>
+          </div>
+        </div>
+      </header>
+
+      <div id="mensaje-suspension" style="display:none; padding:1rem; background:rgba(239, 68, 68, 0.2); border:1px solid var(--danger-color); border-radius:0.5rem; margin-bottom:1rem; color:var(--text-primary); font-weight:600;"></div>
+
+      <section id="section-mis-turnos" class="card">
+        <div class="card-header">
+          <h3>Mi Historial de Turnos</h3>
+        </div>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Hora</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="tabla-mis-turnos"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="section-reservar" class="card" style="display: none;">
+        <div class="card-header">
+          <h3>Solicitar Nuevo Turno</h3>
+        </div>
+        <div style="margin-top: 1.5rem; max-width: 600px;">
+          <form id="form-reserva" onsubmit="event.preventDefault();">
+            <div class="form-group">
+              <label for="reserva-especialidad">1. Seleccionar Especialidad</label>
+              <select id="reserva-especialidad" class="form-control" required>
+                <option value="">Cargando especialidades...</option>
+              </select>
+            </div>
+            
+            <div class="form-group" style="margin-top:1rem;">
+              <label for="reserva-medico">2. Seleccionar Médico</label>
+              <select id="reserva-medico" class="form-control" required disabled>
+                <option value="">Primero elija especialidad</option>
+              </select>
+            </div>
+            
+            <div class="form-group" style="margin-top:1rem;">
+              <label for="reserva-fecha">3. Elegir Fecha</label>
+              <input type="date" id="reserva-fecha" class="form-control" required disabled>
+            </div>
+            
+            <div class="form-group" style="margin-top:1rem;">
+              <button class="btn btn-secondary" id="btn-buscar-turnos" disabled>Buscar Horarios</button>
+            </div>
+          </form>
+
+          <div id="contenedor-horarios" style="margin-top: 2rem; display: none;">
+            <h4 style="margin-bottom:1rem; color:var(--text-primary)">Horarios Disponibles</h4>
+            <div id="grilla-horarios" style="display: flex; gap:10px; flex-wrap: wrap;">
+              <!-- Botones de horarios generados por JS -->
+            </div>
+            
+            <div id="panel-confirmacion" style="margin-top: 1.5rem; padding-top:1.5rem; border-top: 1px solid var(--border-color); display:none;">
+              <div class="form-group">
+                <label for="reserva-motivo">Motivo de Consulta (Breve)</label>
+                <textarea id="reserva-motivo" class="form-control" rows="2" placeholder="Ej: Chequeo general..." required></textarea>
+              </div>
+              <button class="btn btn-primary btn-block" id="btn-confirmar-reserva" style="margin-top: 1rem;">Confirmar Reserva</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Nueva sección de Historia Clínica (Sprint 3) -->
+      <section id="section-historia" class="card" style="display: none;">
+        <div class="card-header">
+          <h3>Mi Historia Clínica</h3>
+        </div>
+        <div id="historia-container" style="margin-top: 1rem; display: flex; flex-direction: column; gap: 1rem;">
+          <!-- Las tarjetas de la historia se renderizan aquí -->
+        </div>
+      </section>
+    </main>
+  </div>
+  <script src="js/api.js"></script>
+  <script src="js/paciente.js"></script>
+  <script src="js/accessibility.js"></script>
+</body>
+</html>

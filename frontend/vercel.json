@@ -1,0 +1,7 @@
+{
+  "rewrites": [
+    { "source": "/portal", "destination": "/public/portal.html" },
+    { "source": "/", "destination": "/public/portal.html" },
+    { "source": "/(.*)", "destination": "/public/$1" }
+  ]
+}

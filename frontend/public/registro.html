@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Registro - Salud Goya</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+</head>
+<body class="login-body">
+  <div class="login-container" style="max-width: 500px;">
+    <div class="login-card">
+      <div class="login-header">
+        <h1>Salud Goya</h1>
+        <p>Registro de Nuevo Paciente</p>
+      </div>
+      
+      <div id="error-message-reg" class="alert error hidden"></div>
+
+      <form id="registro-form">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+          <div class="form-group">
+            <label for="reg-nombre">Nombre</label>
+            <input type="text" id="reg-nombre" required>
+          </div>
+          <div class="form-group">
+            <label for="reg-apellido">Apellido</label>
+            <input type="text" id="reg-apellido" required>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+          <div class="form-group">
+            <label for="reg-dni">DNI</label>
+            <input type="text" id="reg-dni" required pattern="[0-9]{7,9}" title="Debe contener entre 7 y 9 números">
+          </div>
+          <div class="form-group">
+            <label for="reg-fecha">Nacimiento</label>
+            <input type="date" id="reg-fecha" required>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+          <div class="form-group">
+            <label for="reg-telefono">Teléfono</label>
+            <input type="text" id="reg-telefono" required>
+          </div>
+          <div class="form-group">
+            <label for="reg-direccion">Dirección <span style="font-size:0.8rem; color:var(--text-secondary)">(Opcional)</span></label>
+            <input type="text" id="reg-direccion">
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label for="reg-email">Correo Electrónico</label>
+          <input type="email" id="reg-email" required>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+          <div class="form-group">
+            <label for="reg-password">Contraseña</label>
+            <input type="password" id="reg-password" required minlength="6">
+          </div>
+          <div class="form-group">
+            <label for="reg-password-confirm">Confirmar Contraseña</label>
+            <input type="password" id="reg-password-confirm" required minlength="6">
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block" style="margin-top: 15px;" id="btn-registrar">Crear Cuenta</button>
+      </form>
+      
+      <div class="login-footer">
+        <p>¿Ya tienes cuenta? <a href="index.html">Inicia sesión aquí</a></p>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
+</body>
+</html>

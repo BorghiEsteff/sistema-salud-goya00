@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Portal de Pacientes - Salud Goya</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+  <style>
+    .portal-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      justify-content: center;
+      align-items: flex-start;
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .portal-section {
+      flex: 1 1 400px;
+    }
+    /* Estilos específicos para errores inline (Regla: mostrar debajo del campo) */
+    .field-error {
+      color: #ff4d4d;
+      font-size: 0.8rem;
+      margin-top: 5px;
+      display: block;
+    }
+  </style>
+</head>
+<body class="login-body">
+  <div class="portal-container">
+    
+    <!-- Sección de Login -->
+    <div class="login-card portal-section">
+      <div class="login-header">
+        <h1>Salud Goya</h1>
+        <p>Ingreso para Pacientes</p>
+      </div>
+      
+      <div id="login-global-error" class="alert error hidden"></div>
+
+      <form id="login-form">
+        <div class="form-group">
+          <label for="login-email">Correo Electrónico</label>
+          <input type="email" id="login-email" class="form-control" required placeholder="tu@email.com">
+          <span class="field-error" id="error-login-email"></span>
+        </div>
+        
+        <div class="form-group">
+          <label for="login-password">Contraseña</label>
+          <input type="password" id="login-password" class="form-control" required placeholder="••••••••">
+          <span class="field-error" id="error-login-password"></span>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block">Ingresar</button>
+      </form>
+      
+      <div class="login-footer" style="margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px;">
+        <p>¿Sos profesional de la salud? <a href="index.html">Accedé aquí</a></p>
+      </div>
+    </div>
+
+    <!-- Sección de Registro -->
+    <div class="login-card portal-section">
+      <div class="login-header">
+        <h2>Registro de Nuevo Paciente</h2>
+      </div>
+      
+      <div id="registro-global-error" class="alert error hidden"></div>
+
+      <form id="registro-form">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+          <div class="form-group">
+            <label for="reg-nombre">Nombre</label>
+            <input type="text" id="reg-nombre" class="form-control" required>
+            <span class="field-error" id="error-reg-nombre"></span>
+          </div>
+          <div class="form-group">
+            <label for="reg-apellido">Apellido</label>
+            <input type="text" id="reg-apellido" class="form-control" required>
+            <span class="field-error" id="error-reg-apellido"></span>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+          <div class="form-group">
+            <label for="reg-dni">DNI</label>
+            <input type="text" id="reg-dni" class="form-control" required pattern="[0-9]{7,9}" title="Debe contener entre 7 y 9 números">
+            <span class="field-error" id="error-reg-dni"></span>
+          </div>
+          <div class="form-group">
+            <label for="reg-fecha">Nacimiento</label>
+            <input type="date" id="reg-fecha" class="form-control" required>
+            <span class="field-error" id="error-reg-fecha"></span>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+          <div class="form-group">
+            <label for="reg-telefono">Teléfono</label>
+            <input type="text" id="reg-telefono" class="form-control" required>
+            <span class="field-error" id="error-reg-telefono"></span>
+          </div>
+          <div class="form-group">
+            <label for="reg-direccion">Dirección <span style="font-size:0.8rem; color:var(--text-secondary)">(Opcional)</span></label>
+            <input type="text" id="reg-direccion" class="form-control">
+            <span class="field-error" id="error-reg-direccion"></span>
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label for="reg-email">Correo Electrónico</label>
+          <input type="email" id="reg-email" class="form-control" required>
+          <span class="field-error" id="error-reg-email"></span>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+          <div class="form-group">
+            <label for="reg-password">Contraseña</label>
+            <input type="password" id="reg-password" class="form-control" required minlength="6">
+            <span class="field-error" id="error-reg-password"></span>
+          </div>
+          <div class="form-group">
+            <label for="reg-password-confirm">Confirmar Contraseña</label>
+            <input type="password" id="reg-password-confirm" class="form-control" required minlength="6">
+            <span class="field-error" id="error-reg-password-confirm"></span>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block" style="margin-top: 15px;" id="btn-registrar">Crear Cuenta</button>
+      </form>
+    </div>
+  </div>
+
+  <script src="js/api.js"></script>
+  <script src="js/portal.js"></script>
+  <script src="js/accessibility.js"></script>
+</body>
+</html>
