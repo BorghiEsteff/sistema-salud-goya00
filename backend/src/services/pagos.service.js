@@ -68,7 +68,7 @@ function validarFirma(req) {
   }
 
   const dataId = bodyData.data && bodyData.data.id ? bodyData.data.id.toString() : '';
-  const manifest = \`id:\${dataId};request-id:\${xRequestId};ts:\${ts};\`;
+  const manifest = `id:${dataId};request-id:${xRequestId};ts:${ts};`;
 
   const hmac = crypto.createHmac('sha256', secret);
   hmac.update(manifest);
@@ -92,22 +92,22 @@ async function procesarWebhook(req) {
     const turnoId = payData.external_reference;
     
     if (payData.status === 'approved') {
-      await db.query(\`
+      await db.query(`
         UPDATE turnos SET estado_pago = 'pagado', monto_pagado = $1 WHERE id = $2
-      \`, [payData.transaction_amount, turnoId]);
+      `, [payData.transaction_amount, turnoId]);
       
-      await db.query(\`
+      await db.query(`
         UPDATE pagos 
         SET mp_payment_id = $1, estado = 'pagado', pagado_en = NOW(), actualizado_en = NOW()
         WHERE turno_id = $2
-      \`, [paymentId, turnoId]);
+      `, [paymentId, turnoId]);
     } else if (payData.status === 'rejected' || payData.status === 'cancelled') {
-      await db.query(\`
+      await db.query(`
         UPDATE turnos SET estado_pago = 'pendiente' WHERE id = $1
-      \`, [turnoId]);
-      await db.query(\`
+      `, [turnoId]);
+      await db.query(`
         UPDATE pagos SET estado = 'pendiente', actualizado_en = NOW() WHERE turno_id = $1
-      \`, [turnoId]);
+      `, [turnoId]);
     }
   }
 }
@@ -123,15 +123,15 @@ async function reembolsar(turnoId) {
   
   const refundData = await refundObj.create({ payment_id: paymentId });
   
-  await db.query(\`
+  await db.query(`
     UPDATE turnos SET estado_pago = 'reembolso_pendiente' WHERE id = $1
-  \`, [turnoId]);
+  `, [turnoId]);
   
-  await db.query(\`
+  await db.query(`
     UPDATE pagos 
     SET mp_refund_id = $1, estado = 'reembolso_pendiente', actualizado_en = NOW()
     WHERE turno_id = $2
-  \`, [refundData.id, turnoId]);
+  `, [refundData.id, turnoId]);
 }
 
 module.exports = { crearPreferencia, procesarWebhook, reembolsar };
