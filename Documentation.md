@@ -394,12 +394,16 @@ Se implementó el CRUD completo para gestionar perfiles de Secretaría desde el 
 Se sentaron las bases para la integración financiera con MercadoPago SDK.
 - **Backend:** Adición del SDK de MP (`mercadopago`), migración de BD añadiendo campos `modalidad_pago`, `precio_consulta` a médicos; y `estado_pago` a turnos. Creación de tabla `pagos`. Middleware de `express.raw` para validar webhooks de MP (HMAC-SHA256).
 
+**Archivos modificados:** `app.js` (middleware raw), ejecución de scripts SQL.
+
 ---
 
 ### Sprint 13 — Lógica de Reserva Condicionada y Checkout
 Se reescribió el flujo de `reservarTurno` para generar pagos pendientes y preferencias de MP.
 - **Backend:** `pagos.controller.js` con método `crearPreferencia` y `webhook`. Si el paciente no tiene obra social y el médico es prepago, se inserta pago 'pendiente'.
 - **Frontend:** Flujo del paciente incluye redirección al checkout vía SDK en `checkout-pago.html` y callbacks en `pago-exitoso.html`.
+
+**Archivos modificados:** `turnos.controller.js`, `pagos.controller.js`, `pagos.routes.js`, `checkout-pago.html`, `pago-exitoso.html`, `pago-fallido.html`, `pago-pendiente.html`, `paciente.js`.
 
 ---
 
@@ -408,11 +412,15 @@ Habilitación a la secretaría y administradores de ver la trazabilidad y cancel
 - **Backend:** `cancelarTurno` implementa reembolso automático si el `estado_pago` es 'pagado'.
 - **Frontend:** Vista de Secretaría mejorada con columna "Pago", filtrado por estado de pago y alertas de reembolso en cancelación. Vista de Admin mejorada con modal "Editar Médico" para fijar precios y modalidad de cobro.
 
+**Archivos modificados:** `turnos.controller.js`, `pagos.service.js`, `admin.controller.js`, `admin.routes.js`, `dashboard-secretaria.html`, `secretaria.js`, `dashboard-admin.html`, `admin.js`.
+
 ---
 
 ### Sprint 15 — Panel de Informes (Chart.js)
 Incorporación de un motor de reportes básicos.
 - **Backend:** Endpoints agregados en `/api/admin/informes` para series temporales y agrupación de estados.
 - **Frontend:** Inclusión de `chart.min.js`. Gráficos de torta (turnos por estado) y barras (pagos) en el Panel de Administración.
+
+**Archivos modificados:** `informes.controller.js`, `informes.routes.js`, `app.js`, `dashboard-admin.html`, `informes.js`.
 
 
