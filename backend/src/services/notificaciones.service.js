@@ -68,7 +68,7 @@ async function enviarEmailNotificacion(notificacionId) {
         const dateObj = new Date(turnoInfo.fecha_turno);
         datos.fechaTurno = dateObj.toLocaleDateString('es-AR');
         datos.horaTurno = turnoInfo.hora_inicio.substring(0, 5); // HH:mm
-        datos.nombreMedico = \`\${turnoInfo.nombreMedico} \${turnoInfo.apellidoMedico}\`;
+        datos.nombreMedico = `${turnoInfo.nombreMedico} ${turnoInfo.apellidoMedico}`;
       }
     }
 
