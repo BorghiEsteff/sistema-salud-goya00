@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Salud Goya - Admin Dashboard</title>
   <link rel="stylesheet" href="css/styles.css">
 </head>
@@ -43,10 +43,16 @@
         <div class="card-header">
           <h3>Especialidades Médicas</h3>
           <div>
-            <button class="btn-primary" style="background-color: var(--danger-color);" onclick="limpiarEspecialidadesVacias()">Limpiar Vacías</button>
-            <button class="btn-primary" onclick="document.getElementById('modal-especialidad').classList.remove('hidden')">+ Nueva Especialidad</button>
+            <button class="btn btn-outline" style="color: var(--danger-color); border-color: var(--danger-color);" onclick="limpiarEspecialidadesVacias()">🗑 Limpiar Vacías</button>
+            <button class="btn btn-primary" onclick="document.getElementById('modal-especialidad').classList.remove('hidden')">➕ Nueva Especialidad</button>
           </div>
         </div>
+        
+        <!-- Vista rápida de Especialidades (Sprint 2) -->
+        <div id="grilla-especialidades" style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; padding: 15px; background: rgba(0,0,0,0.1); border-radius: 8px;">
+          <span style="color: var(--text-secondary); width: 100%;">Cargando vista rápida...</span>
+        </div>
+
         <div class="table-container">
           <table>
             <thead>
@@ -67,7 +73,11 @@
       <section id="section-medicos" class="card" style="display: none;">
         <div class="card-header">
           <h3>Gestión de Médicos</h3>
-          <button class="btn-primary" onclick="document.getElementById('modal-medico').classList.remove('hidden')">+ Nuevo Médico</button>
+          <div style="display: flex; gap: 10px; align-items: center;">
+            <input type="text" id="filtro-medico-nombre" class="form-control" placeholder="Buscar por nombre o apellido..." style="width: 250px;">
+            <button class="btn btn-secondary" id="btn-filtrar-medicos">Buscar</button>
+            <button class="btn btn-primary" onclick="document.getElementById('modal-medico').classList.remove('hidden')">➕ Nuevo Médico</button>
+          </div>
         </div>
         <div class="table-container">
           <table>
@@ -90,7 +100,7 @@
       <section id="section-secretarias" class="card" style="display: none;">
         <div class="card-header">
           <h3>Gestión de Secretarías</h3>
-          <button class="btn-primary" onclick="document.getElementById('modal-secretaria').classList.remove('hidden')">+ Nueva Secretaría</button>
+          <button class="btn btn-primary" onclick="document.getElementById('modal-secretaria').classList.remove('hidden')">➕ Nueva Secretaría</button>
         </div>
         <div class="table-container">
           <table>
@@ -111,6 +121,13 @@
       <section id="section-pacientes" class="card" style="display: none;">
         <div class="card-header">
           <h3>Control de Pacientes</h3>
+          <div style="display: flex; gap: 10px; align-items: center;">
+            <input type="text" id="filtro-paciente-dni" class="form-control" placeholder="DNI..." style="width: 120px;">
+            <input type="text" id="filtro-paciente-nombre" class="form-control" placeholder="Nombre..." style="width: 150px;">
+            <input type="text" id="filtro-paciente-apellido" class="form-control" placeholder="Apellido..." style="width: 150px;">
+            <button class="btn btn-secondary" id="btn-filtrar-pacientes">Buscar</button>
+            <button class="btn" id="btn-limpiar-pacientes" style="background:none; border:1px solid rgba(255,255,255,0.2); color:#fff;">Limpiar</button>
+          </div>
         </div>
         <div class="table-container">
           <table>
@@ -285,6 +302,19 @@
           </form>
         </div>
       </div>
+
+      <!-- Modal para listar médicos de una especialidad (Sprint 2) -->
+      <div id="modal-medicos-esp" class="modal hidden">
+        <div class="modal-content" style="max-width: 500px; padding: 2rem;">
+          <h3 id="medicos-esp-titulo">Médicos de la Especialidad</h3>
+          <ul id="lista-medicos-esp" style="list-style: none; padding: 0; margin-top: 15px; max-height: 300px; overflow-y: auto;">
+          </ul>
+          <div style="margin-top: 1.5rem; text-align: right;">
+            <button type="button" class="btn btn-secondary" onclick="document.getElementById('modal-medicos-esp').classList.add('hidden')">Cerrar</button>
+          </div>
+        </div>
+      </div>
+
     </main>
     <div id="modal-password" class="modal hidden">
       <div class="modal-content" style="max-width: 400px; padding: 2rem; text-align: center;">

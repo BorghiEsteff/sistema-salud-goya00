@@ -40,26 +40,31 @@ function switchTab(event, sectionId, loadDataFunc) {
 }
 
 async function cargarMisTurnos() {
-  const tbody = document.getElementById('tabla-mis-turnos');
+  const container = document.getElementById('contenedor-mis-turnos');
   try {
     const data = await api.get('/turnos');
-    tbody.innerHTML = '';
+    container.innerHTML = '';
     if(data.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="4">No tienes turnos registrados.</td></tr>';
+      container.innerHTML = '<p style="color:var(--text-secondary); width: 100%; text-align: center;">No tienes turnos registrados.</p>';
       return;
     }
     data.forEach(turno => {
-      tbody.innerHTML += `
-        <tr>
-          <td>${turno.fecha_turno.substr(0,10)}</td>
-          <td>${turno.hora_inicio.substr(0,5)}</td>
-          <td><span class="badge ${turno.estado}">${turno.estado}</span></td>
-          <td>
-            ${(turno.estado === 'solicitado' || turno.estado === 'confirmado') ? `
-              <button onclick="cancelarMiTurno('${turno.id}')" style="color:var(--danger-color);background:none;border:none;cursor:pointer;font-weight:bold;">Cancelar</button>
-            ` : '-'}
-          </td>
-        </tr>
+      const isCancelable = turno.estado === 'solicitado' || turno.estado === 'confirmado';
+      const actionHtml = isCancelable ? 
+        `<button onclick="cancelarMiTurno('${turno.id}')" style="color:var(--danger-color);background:none;border:none;cursor:pointer;font-weight:bold;margin-top:10px;">✖ Cancelar Turno</button>` : '';
+        
+      container.innerHTML += `
+        <div class="card" style="background:var(--surface-dark); border: 1px solid var(--border-color); padding: 15px; display: flex; flex-direction: column; justify-content: space-between;">
+          <div>
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 10px;">
+              <span style="font-weight:bold; color:var(--primary-color); font-size:1.1rem;">${turno.fecha_turno.substr(0,10)}</span>
+              <span class="badge ${turno.estado}">${turno.estado}</span>
+            </div>
+            <p style="margin: 5px 0;"><strong>Hora:</strong> ${turno.hora_inicio.substr(0,5)}</p>
+            <p style="margin: 5px 0;"><strong>Médico:</strong> Dr/a. ${turno.medico_nombre} ${turno.medico_apellido}</p>
+          </div>
+          ${actionHtml}
+        </div>
       `;
     });
   } catch (err) { alert(err.message); }
@@ -181,7 +186,13 @@ document.getElementById('reserva-especialidad').addEventListener('change', async
     let grillaHtml = '';
     medicosCache.forEach(m => {
       html += `<option value="${m.id}">${m.nombre} ${m.apellido}</option>`;
-      grillaHtml += `<button type="button" class="btn btn-secondary btn-medico" data-id="${m.id}" onclick="seleccionarMedico('${m.id}')">${m.nombre} ${m.apellido}</button>`;
+      grillaHtml += `
+        <div class="card btn-medico" data-id="${m.id}" onclick="seleccionarMedico('${m.id}')" style="cursor: pointer; padding: 15px; width: 200px; text-align: center; border: 2px solid transparent; transition: all 0.2s; background: var(--surface-dark);">
+          <div style="font-size: 3rem; margin-bottom: 10px;">👨‍⚕️</div>
+          <strong style="color:var(--text-primary); display:block; margin-bottom:5px;">Dr/a. ${m.nombre} ${m.apellido}</strong>
+          <small style="color:var(--text-secondary);">Mat: ${m.matricula}</small>
+        </div>
+      `;
     });
     comboMedico.innerHTML = html;
     document.getElementById('grilla-medicos').innerHTML = grillaHtml;
@@ -195,8 +206,15 @@ window.seleccionarMedico = function(id) {
   const select = document.getElementById('reserva-medico');
   select.value = id;
   select.dispatchEvent(new Event('change'));
-  document.querySelectorAll('.btn-medico').forEach(b => b.style.background = 'rgba(255, 255, 255, 0.05)');
-  document.querySelector(`.btn-medico[data-id="${id}"]`).style.background = 'var(--primary-color)';
+  document.querySelectorAll('.btn-medico').forEach(b => {
+      b.style.borderColor = 'transparent';
+      b.style.background = 'var(--surface-dark)';
+  });
+  const selected = document.querySelector(`.btn-medico[data-id="${id}"]`);
+  if(selected) {
+    selected.style.borderColor = 'var(--primary-color)';
+    selected.style.background = 'rgba(139, 92, 246, 0.1)';
+  }
 };
 
 document.getElementById('reserva-medico').addEventListener('change', (e) => {

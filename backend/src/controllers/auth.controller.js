@@ -35,12 +35,25 @@ async function login(req, res, next) {
       rol: usuario.rol
     };
 
+    let datosPersonales = {};
+
     if (usuario.rol === 'medico') {
-      const medRes = await db.query('SELECT id FROM medicos WHERE usuario_id = $1', [usuario.id]);
-      if (medRes.rows.length > 0) payload.medico_id = medRes.rows[0].id;
+      const medRes = await db.query('SELECT id, nombre, apellido FROM medicos WHERE usuario_id = $1', [usuario.id]);
+      if (medRes.rows.length > 0) {
+        payload.medico_id = medRes.rows[0].id;
+        datosPersonales = { nombre: medRes.rows[0].nombre, apellido: medRes.rows[0].apellido };
+      }
     } else if (usuario.rol === 'paciente') {
-      const pacRes = await db.query('SELECT id FROM pacientes WHERE usuario_id = $1', [usuario.id]);
-      if (pacRes.rows.length > 0) payload.paciente_id = pacRes.rows[0].id;
+      const pacRes = await db.query('SELECT id, nombre, apellido FROM pacientes WHERE usuario_id = $1', [usuario.id]);
+      if (pacRes.rows.length > 0) {
+        payload.paciente_id = pacRes.rows[0].id;
+        datosPersonales = { nombre: pacRes.rows[0].nombre, apellido: pacRes.rows[0].apellido };
+      }
+    } else if (usuario.rol === 'secretaria') {
+      const secRes = await db.query('SELECT id, nombre, apellido FROM secretarias WHERE usuario_id = $1', [usuario.id]);
+      if (secRes.rows.length > 0) {
+        datosPersonales = { nombre: secRes.rows[0].nombre, apellido: secRes.rows[0].apellido };
+      }
     }
 
     const token = jwt.sign(payload, process.env.JWT_SECRET, {
@@ -53,6 +66,7 @@ async function login(req, res, next) {
         id: usuario.id,
         email: usuario.email,
         rol: usuario.rol,
+        ...datosPersonales,
         ...(payload.medico_id && { medico_id: payload.medico_id }),
         ...(payload.paciente_id && { paciente_id: payload.paciente_id })
       }

@@ -4,6 +4,12 @@ document.addEventListener('DOMContentLoaded', () => {
     window.location.href = 'index.html';
     return;
   }
+  
+  // Mostrar el nombre real (Sprint 5)
+  if (user.nombre) {
+    const badge = document.querySelector('.user-profile .badge');
+    if (badge) badge.innerText = `Secretaría: ${user.nombre} ${user.apellido}`;
+  }
 
   const hoy = new Date().toISOString().split('T')[0];
   document.getElementById('fecha-filtro').value = hoy;

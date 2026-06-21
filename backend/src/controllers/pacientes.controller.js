@@ -64,19 +64,41 @@ async function updatePerfil(req, res, next) {
 // Listado de todos los pacientes (Solo Admin y Secretaría)
 async function getAllPacientes(req, res, next) {
   try {
-    if (req.query.page) {
-      const page = parseInt(req.query.page) || 1;
-      const limit = parseInt(req.query.limit) || 10;
-      const offset = (page - 1) * limit;
+    const { page, limit, nombre, apellido, dni } = req.query;
+    
+    let query = 'SELECT p.*, u.email FROM pacientes p JOIN usuarios u ON p.usuario_id = u.id WHERE 1=1';
+    const params = [];
+    
+    if (nombre) {
+      params.push(`%${nombre}%`);
+      query += ` AND p.nombre ILIKE $${params.length}`;
+    }
+    if (apellido) {
+      params.push(`%${apellido}%`);
+      query += ` AND p.apellido ILIKE $${params.length}`;
+    }
+    if (dni) {
+      params.push(`%${dni}%`);
+      query += ` AND p.dni ILIKE $${params.length}`;
+    }
 
-      const countRes = await db.query('SELECT COUNT(*) FROM pacientes');
+    query += ' ORDER BY p.activo DESC, p.apellido ASC';
+
+    if (page) {
+      const p = parseInt(page) || 1;
+      const l = parseInt(limit) || 10;
+      const offset = (p - 1) * l;
+
+      const countRes = await db.query(`SELECT COUNT(*) FROM (${query}) AS subquery`, params);
       const total = parseInt(countRes.rows[0].count);
 
-      const result = await db.query('SELECT p.*, u.email FROM pacientes p JOIN usuarios u ON p.usuario_id = u.id ORDER BY p.activo DESC, p.apellido ASC LIMIT $1 OFFSET $2', [limit, offset]);
+      params.push(l, offset);
+      query += ` LIMIT $${params.length - 1} OFFSET $${params.length}`;
       
-      res.json({ data: result.rows, total, page, pages: Math.ceil(total / limit) });
+      const result = await db.query(query, params);
+      res.json({ data: result.rows, total, page: p, pages: Math.ceil(total / l) });
     } else {
-      const result = await db.query('SELECT p.*, u.email FROM pacientes p JOIN usuarios u ON p.usuario_id = u.id ORDER BY p.activo DESC, p.apellido ASC');
+      const result = await db.query(query, params);
       res.json(result.rows);
     }
   } catch (err) { next(err); }

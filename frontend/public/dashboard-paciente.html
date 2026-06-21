@@ -11,7 +11,7 @@
       <h2>🏥 Salud Goya</h2>
       <ul class="nav-links">
         <li><a href="#" class="active" id="nav-mis-turnos">📅 Mis Turnos</a></li>
-        <li><a href="#" id="nav-historia">🩺 Mi Historia Clínica</a></li>
+        <li><a href="#" id="nav-historia">📝 Mi Historia Clínica</a></li>
         <li><a href="#" id="nav-reservar">➕ Reservar Turno</a></li>
       </ul>
       <button class="logout-btn" onclick="window.logout()">Cerrar Sesión</button>
@@ -27,9 +27,9 @@
           </div>
 
           <!-- Campana de notificaciones -->
-          <div class="notificaciones-container" style="position: relative; cursor: pointer;">
-            <span id="btn-notificaciones" style="font-size: 1.5rem;">🔔</span>
-            <span id="notificaciones-badge" class="badge" style="position: absolute; top: -5px; right: -10px; background: var(--danger-color); color: white; border-radius: 50%; padding: 2px 6px; font-size: 0.75rem; display: none;">0</span>
+          <div class="notificaciones-container" title="Notificaciones" style="position: relative; cursor: pointer; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">
+            <span id="btn-notificaciones" style="font-size: 1.5rem; text-shadow: 0 0 10px rgba(255,255,255,0.2);">🔔</span>
+            <span id="notificaciones-badge" class="badge" style="position: absolute; top: -5px; right: -10px; background: var(--danger-color); color: white; border-radius: 50%; padding: 2px 6px; font-size: 0.75rem; display: none; box-shadow: 0 2px 4px rgba(0,0,0,0.5);">0</span>
             <div id="notificaciones-dropdown" class="card" style="display: none; position: absolute; top: 100%; right: 0; width: 300px; z-index: 1000; padding: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-top: 10px; max-height: 400px; overflow-y: auto;">
               <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; margin-bottom: 10px;">
                 <h4 style="margin: 0; font-size: 1rem; color: var(--text-primary);">Notificaciones</h4>
@@ -57,18 +57,8 @@
         <div class="card-header">
           <h3>Mi Historial de Turnos</h3>
         </div>
-        <div class="table-container">
-          <table>
-            <thead>
-              <tr>
-                <th>Fecha</th>
-                <th>Hora</th>
-                <th>Estado</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody id="tabla-mis-turnos"></tbody>
-          </table>
+        <div id="contenedor-mis-turnos" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 15px; margin-top: 20px;">
+          <!-- JS renderiza aquí -->
         </div>
       </section>
 
@@ -79,16 +69,16 @@
         <div style="margin-top: 1.5rem; max-width: 600px;">
           <form id="form-reserva" onsubmit="event.preventDefault();">
             <div class="form-group">
-              <label for="reserva-especialidad">1. Seleccionar Especialidad</label>
-              <select id="reserva-especialidad" class="form-control" required>
+              <label>1. Seleccionar Especialidad</label>
+              <select id="reserva-especialidad" class="form-control" style="display: none;">
                 <option value="">Cargando especialidades...</option>
               </select>
               <div id="grilla-especialidades" style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px;"></div>
             </div>
             
             <div class="form-group" style="margin-top:1rem;">
-              <label for="reserva-medico">2. Seleccionar Médico</label>
-              <select id="reserva-medico" class="form-control" required disabled>
+              <label>2. Seleccionar Médico</label>
+              <select id="reserva-medico" class="form-control" style="display: none;">
                 <option value="">Primero elija especialidad</option>
               </select>
               <div id="grilla-medicos" style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px;"></div>

@@ -29,10 +29,16 @@ function switchTab(event, sectionId, loadDataFunc) {
 
 async function cargarEspecialidades() {
   const tbody = document.getElementById('tabla-especialidades');
+  const grilla = document.getElementById('grilla-especialidades');
+  
   tbody.innerHTML = '<tr><td colspan="4"><div class="spinner"></div> Cargando...</td></tr>';
+  if (grilla) grilla.innerHTML = '<div class="spinner"></div> Cargando...';
+  
   try {
     const data = await api.get('/admin/especialidades');
     tbody.innerHTML = '';
+    if (grilla) grilla.innerHTML = '';
+    
     data.forEach(esp => {
       const badgeText = esp.activo ? 'ACTIVO' : 'INACTIVO';
       const badgeColor = esp.activo ? 'var(--success-color, #10b981)' : 'var(--danger-color, #ef4444)';
@@ -46,9 +52,65 @@ async function cargarEspecialidades() {
           <td>${actionHtml}</td>
         </tr>
       `;
+      
+      // Grilla de botones (Sprint 2)
+      if (grilla && esp.activo) {
+        const count = parseInt(esp.medicos_activos_count || 0);
+        const btnColor = count > 0 ? 'var(--success-color, #10b981)' : 'var(--danger-color, #ef4444)';
+        
+        const btnEsp = document.createElement('button');
+        btnEsp.className = 'btn';
+        btnEsp.style.backgroundColor = btnColor;
+        btnEsp.style.color = '#fff';
+        btnEsp.style.padding = '10px 15px';
+        btnEsp.style.borderRadius = '8px';
+        btnEsp.style.border = 'none';
+        btnEsp.style.cursor = 'pointer';
+        btnEsp.innerText = `${esp.nombre} (${count})`;
+        btnEsp.onclick = () => verMedicosEspecialidad(esp.id, esp.nombre, count);
+        
+        grilla.appendChild(btnEsp);
+      }
     });
+    
+    if (grilla && grilla.innerHTML === '') {
+       grilla.innerHTML = '<span style="color:var(--text-secondary)">No hay especialidades activas.</span>';
+    }
   } catch (err) { alert(err.message); }
 }
+
+window.verMedicosEspecialidad = async function(id, nombre, count) {
+  const modal = document.getElementById('modal-medicos-esp');
+  const titulo = document.getElementById('medicos-esp-titulo');
+  const lista = document.getElementById('lista-medicos-esp');
+  
+  titulo.innerText = `Médicos Activos - ${nombre}`;
+  lista.innerHTML = '<li><div class="spinner"></div> Cargando...</li>';
+  modal.classList.remove('hidden');
+  
+  if (count === 0) {
+    lista.innerHTML = '<li style="color:var(--text-secondary)">No hay médicos activos en esta especialidad.</li>';
+    return;
+  }
+  
+  try {
+    const medicos = await api.get(`/admin/medicos?especialidad_id=${id}&activo=true`);
+    lista.innerHTML = '';
+    if (medicos.length === 0) {
+      lista.innerHTML = '<li style="color:var(--text-secondary)">No hay médicos activos en esta especialidad.</li>';
+      return;
+    }
+    
+    medicos.forEach(m => {
+      lista.innerHTML += `<li style="padding: 10px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between;">
+        <span><strong style="color:var(--primary-color)">Dr/a. ${m.nombre} ${m.apellido}</strong><br><small style="color:var(--text-secondary)">Mat: ${m.matricula}</small></span>
+        <span>${m.telefono ? '📞 ' + m.telefono : ''}</span>
+      </li>`;
+    });
+  } catch(err) {
+    lista.innerHTML = `<li style="color:var(--danger-color)">Error al cargar: ${err.message}</li>`;
+  }
+};
 
 async function borrarEspecialidad(id) {
   if(confirm('¿Borrar especialidad?')) {
@@ -57,11 +119,28 @@ async function borrarEspecialidad(id) {
   }
 }
 
-async function cargarMedicos() {
+let pageMedicos = 1;
+async function cargarMedicos(page = 1) {
+  if (typeof page !== 'number') page = 1;
+  pageMedicos = page;
+  
   const tbody = document.getElementById('tabla-medicos');
+  const filtroNombre = document.getElementById('filtro-medico-nombre') ? document.getElementById('filtro-medico-nombre').value : '';
+  
+  let url = `/admin/medicos?page=${page}&limit=10`;
+  if (filtroNombre) url += `&nombre=${encodeURIComponent(filtroNombre)}`;
+  
+  tbody.innerHTML = '<tr><td colspan="6"><div class="spinner"></div> Cargando...</td></tr>';
   try {
-    const data = await api.get('/admin/medicos');
+    const res = await api.get(url);
+    const data = res.data || res;
     tbody.innerHTML = '';
+    
+    if (data.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6">No se encontraron médicos.</td></tr>';
+      return;
+    }
+    
     data.forEach(med => {
       const badgeText = med.activo ? 'ACTIVO' : 'INACTIVO';
       const badgeColor = med.activo ? 'var(--success-color, #10b981)' : 'var(--danger-color, #ef4444)';
@@ -82,7 +161,25 @@ async function cargarMedicos() {
         </tr>
       `;
     });
+    
+    // Add pagination container if missing, otherwise reuse existing or create one
+    let pagCont = document.getElementById('paginacion-medicos');
+    if (!pagCont) {
+      pagCont = document.createElement('div');
+      pagCont.id = 'paginacion-medicos';
+      pagCont.className = 'pagination-controls';
+      pagCont.style.cssText = 'display:flex; justify-content:center; gap:10px; margin-top:15px; padding-bottom:15px;';
+      document.getElementById('section-medicos').appendChild(pagCont);
+    }
+    
+    if (res.pages) renderPaginacion('paginacion-medicos', res.page, res.pages, cargarMedicos);
+    else document.getElementById('paginacion-medicos').innerHTML = '';
+    
   } catch (err) { alert(err.message); }
+}
+
+if (document.getElementById('btn-filtrar-medicos')) {
+  document.getElementById('btn-filtrar-medicos').addEventListener('click', () => cargarMedicos(1));
 }
 
 async function cargarSecretarias() {
@@ -112,16 +209,38 @@ let pagePacientes = 1;
 async function cargarPacientes(page = 1) {
   if (typeof page !== 'number') page = 1;
   pagePacientes = page;
+  
   const tbody = document.getElementById('tabla-pacientes');
+  const filtroDni = document.getElementById('filtro-paciente-dni') ? document.getElementById('filtro-paciente-dni').value : '';
+  const filtroNombre = document.getElementById('filtro-paciente-nombre') ? document.getElementById('filtro-paciente-nombre').value : '';
+  const filtroApellido = document.getElementById('filtro-paciente-apellido') ? document.getElementById('filtro-paciente-apellido').value : '';
+  
+  let url = `/pacientes?page=${page}&limit=10`;
+  if (filtroDni) url += `&dni=${encodeURIComponent(filtroDni)}`;
+  if (filtroNombre) url += `&nombre=${encodeURIComponent(filtroNombre)}`;
+  if (filtroApellido) url += `&apellido=${encodeURIComponent(filtroApellido)}`;
+  
   tbody.innerHTML = '<tr><td colspan="4"><div class="spinner"></div> Cargando...</td></tr>';
   try {
-    const res = await api.get(`/pacientes?page=${page}&limit=10`);
+    const res = await api.get(url);
     const data = res.data || res;
     tbody.innerHTML = '';
+    
+    if (data.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="4">No se encontraron pacientes.</td></tr>';
+      return;
+    }
+    
     data.forEach(pac => {
       let badgeText = 'ACTIVO';
       let badgeClass = 'activo';
-      if(pac.estado_cuenta === 'suspendido') { badgeText = 'SUSPENDIDO'; badgeClass = 'suspendido'; }
+      let suspensionInfo = '';
+      if(pac.estado_cuenta === 'suspendido') { 
+        badgeText = 'SUSPENDIDO'; 
+        badgeClass = 'suspendido'; 
+        const hastaDate = pac.suspension_hasta ? new Date(pac.suspension_hasta).toLocaleDateString('es-AR') : 'Indefinida';
+        suspensionInfo = `<br><small style="color:var(--danger-color)">⚠️ Hasta: ${hastaDate}</small>`;
+      }
       if(!pac.activo) { badgeText = 'INACTIVO'; badgeClass = 'suspendido'; } // Using red style
       
       const isSuspendido = pac.estado_cuenta === 'suspendido';
@@ -140,7 +259,7 @@ async function cargarPacientes(page = 1) {
       tbody.innerHTML += `
         <tr>
           <td>${pac.dni}</td>
-          <td>${pac.nombre} ${pac.apellido}</td>
+          <td>${pac.nombre} ${pac.apellido}${suspensionInfo}</td>
           <td><span class="badge ${badgeClass}">${badgeText}</span></td>
           <td>${actionsHtml}</td>
         </tr>
@@ -149,6 +268,16 @@ async function cargarPacientes(page = 1) {
     if (res.pages) renderPaginacion('paginacion-pacientes', res.page, res.pages, cargarPacientes);
     else document.getElementById('paginacion-pacientes').innerHTML = '';
   } catch (err) { alert(err.message); }
+}
+
+if (document.getElementById('btn-filtrar-pacientes')) {
+  document.getElementById('btn-filtrar-pacientes').addEventListener('click', () => cargarPacientes(1));
+  document.getElementById('btn-limpiar-pacientes').addEventListener('click', () => {
+    document.getElementById('filtro-paciente-dni').value = '';
+    document.getElementById('filtro-paciente-nombre').value = '';
+    document.getElementById('filtro-paciente-apellido').value = '';
+    cargarPacientes(1);
+  });
 }
 
 async function levantarSuspension(id) {

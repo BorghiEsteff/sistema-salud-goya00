@@ -4,7 +4,14 @@ const db = require('../config/db');
 // --- ESPECIALIDADES ---
 async function getEspecialidades(req, res, next) {
   try {
-    const result = await db.query('SELECT * FROM especialidades ORDER BY activo DESC, nombre ASC');
+    const result = await db.query(`
+      SELECT e.*,
+        COUNT(m.id) FILTER (WHERE m.activo = true) AS medicos_activos_count
+      FROM especialidades e
+      LEFT JOIN medicos m ON m.especialidad_id = e.id
+      GROUP BY e.id
+      ORDER BY e.activo DESC, e.nombre ASC
+    `);
     res.json(result.rows);
   } catch (err) { next(err); }
 }
@@ -34,14 +41,48 @@ async function deleteEspecialidad(req, res, next) {
 // --- MÉDICOS ---
 async function getMedicos(req, res, next) {
   try {
-    const result = await db.query(`
+    const { especialidad_id, activo, nombre, page, limit } = req.query;
+    let query = `
       SELECT m.id, m.nombre, m.apellido, m.matricula, m.telefono, m.activo, m.precio_consulta, m.modalidad_pago, e.nombre as especialidad, u.email
       FROM medicos m
       JOIN usuarios u ON m.usuario_id = u.id
       LEFT JOIN especialidades e ON m.especialidad_id = e.id
-      ORDER BY m.activo DESC, m.apellido ASC
-    `);
-    res.json(result.rows);
+      WHERE 1=1
+    `;
+    const params = [];
+    
+    if (especialidad_id) {
+      params.push(especialidad_id);
+      query += ` AND m.especialidad_id = $${params.length}`;
+    }
+    if (activo !== undefined) {
+      params.push(activo === 'true');
+      query += ` AND m.activo = $${params.length}`;
+    }
+    if (nombre) {
+      params.push(`%${nombre}%`);
+      query += ` AND (m.nombre ILIKE $${params.length} OR m.apellido ILIKE $${params.length})`;
+    }
+
+    query += ` ORDER BY m.activo DESC, m.apellido ASC`;
+
+    if (page) {
+      const p = parseInt(page) || 1;
+      const l = parseInt(limit) || 10;
+      const offset = (p - 1) * l;
+      
+      const countRes = await db.query(`SELECT COUNT(*) FROM (${query}) AS subquery`, params);
+      const total = parseInt(countRes.rows[0].count);
+      
+      params.push(l, offset);
+      query += ` LIMIT $${params.length - 1} OFFSET $${params.length}`;
+      
+      const result = await db.query(query, params);
+      res.json({ data: result.rows, total, page: p, pages: Math.ceil(total / l) });
+    } else {
+      const result = await db.query(query, params);
+      res.json(result.rows);
+    }
   } catch (err) { next(err); }
 }
 

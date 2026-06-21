@@ -445,4 +445,13 @@ Se desarrolló un sistema de notificaciones asíncronas para mejorar la comunica
 **Archivos nuevos:** `06_notificaciones.sql`, `notificaciones.controller.js`, `notificaciones.routes.js`, `notificaciones.service.js`, `js/notificaciones.js`, y carpeta `templates/emails/`.
 **Archivos modificados:** `turnos.controller.js`, `pagos.service.js`, `dashboard-paciente.html`, `app.js`.
 
+---
 
+### Sprint 17 — Refactorización Global UX/UI, Accesibilidad y Rendimiento Asíncrono
+Se realizó una actualización masiva (Sprints de Refactorización Interna) enfocada en la experiencia de usuario y el rendimiento del lado del cliente y servidor:
+- **Estética "Glassmorphism"**: Migración a un diseño premium con transparencias (`backdrop-filter`) en `index.html` y `portal.html` para los modales de autenticación. Reemplazo de las clásicas y aburridas tablas en el portal de paciente por un sistema de tarjetas (`CSS Grid`).
+- **Accesibilidad e Interacción**: Adición de etiquetas `title` a botones sin texto visible (como la campana de notificaciones). Bloqueo de zoom forzado en dispositivos iOS inyectando `user-scalable=no` en los viewports. Implementación de microinteracciones fluidas (escalado en hover, text-shadow).
+- **Rendimiento "Fire and Forget"**: Las notificaciones asíncronas (`notificarYEnviar`) ahora se ejecutan en paralelo con promesas no bloqueantes `.catch(...)` sin usar `await` sobre la respuesta del proveedor de Email, reduciendo la latencia de reserva a milisegundos.
+- **Auditoría e Informes**: Paginación optimizada para listados masivos e implementación de la exportación a CSV del log de auditoría completo sin dependencia de la paginación activa. Informes KPI del admin computados directamente vía agregación en PostgreSQL.
+
+**Archivos modificados:** `styles.css`, `dashboard-paciente.html`, `dashboard-admin.html`, `dashboard-medico.html`, `dashboard-secretaria.html`, `index.html`, `portal.html`, `paciente.js`, `admin.js`, `notificaciones.service.js`.
