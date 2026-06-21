@@ -1,6 +1,7 @@
 const db = require('../config/db');
 const { verificarDisponibilidad } = require('../services/disponibilidad.service');
 const { verificarPacienteSuspendido } = require('../services/suspensiones.service');
+const { notificarYEnviar } = require('../services/notificaciones.service');
 
 // 1. Obtener disponibilidad de horarios libres
 async function getDisponibilidad(req, res, next) {
@@ -60,7 +61,7 @@ async function reservarTurno(req, res, next) {
     const hora_fin = horaF.toISOString().substr(11, 8);
 
     // Lógica de pagos (Sprint 4)
-    const mRes = await db.query('SELECT modalidad_pago, precio_consulta FROM medicos WHERE id = $1', [medico_id]);
+    const mRes = await db.query('SELECT modalidad_pago, precio_consulta, nombre, apellido FROM medicos WHERE id = $1', [medico_id]);
     const pRes = await db.query('SELECT obra_social FROM pacientes WHERE id = $1', [paciente_id]);
     
     if (!mRes.rows[0]) return res.status(404).json({ error: 'Médico no encontrado' });
@@ -68,6 +69,7 @@ async function reservarTurno(req, res, next) {
 
     const modalidad = mRes.rows[0].modalidad_pago;
     const precio = mRes.rows[0].precio_consulta || 0;
+    const medicoNombreCompleto = `${mRes.rows[0].nombre} ${mRes.rows[0].apellido}`;
     const obraSocial = pRes.rows[0].obra_social;
 
     let estado = 'solicitado';
@@ -91,6 +93,16 @@ async function reservarTurno(req, res, next) {
         VALUES ($1, $2, $3, 'ARS', 'pendiente')
       `, [turnoActualizado.id, paciente_id, precio]);
     }
+
+    // Notificación Sprint 4 (Notificaciones)
+    await notificarYEnviar({
+      paciente_id: turnoActualizado.paciente_id,
+      turno_id: turnoActualizado.id,
+      tipo: 'turno_reservado',
+      titulo: 'Turno confirmado',
+      mensaje: `Tu turno con ${medicoNombreCompleto} para el ${fecha_turno} a las ${hora_inicio.substring(0, 5)} fue reservado.`,
+      claveIdempotencia: `turno_reservado:${turnoActualizado.id}`
+    });
 
     res.status(201).json(turnoActualizado);
   } catch (err) { next(err); }
@@ -131,7 +143,23 @@ async function cancelarTurno(req, res, next) {
       WHERE id = $3 RETURNING *
     `, [req.usuario.id, motivo_cancelacion, id]);
 
-    res.json(result.rows[0]);
+    const turnoCancelado = result.rows[0];
+
+    // Obtener info del médico para el mensaje
+    const mInfo = await db.query('SELECT nombre, apellido FROM medicos WHERE id = $1', [turnoCancelado.medico_id]);
+    const mNombre = mInfo.rows[0] ? `${mInfo.rows[0].nombre} ${mInfo.rows[0].apellido}` : 'el médico';
+
+    const fechaFormat = new Date(turnoCancelado.fecha_turno).toLocaleDateString('es-AR');
+    await notificarYEnviar({
+      paciente_id: turnoCancelado.paciente_id,
+      turno_id: turnoCancelado.id,
+      tipo: 'turno_cancelado',
+      titulo: 'Turno cancelado',
+      mensaje: `Tu turno con ${mNombre} para el ${fechaFormat} a las ${turnoCancelado.hora_inicio.substring(0, 5)} ha sido cancelado.`,
+      claveIdempotencia: `turno_cancelado:${turnoCancelado.id}`
+    });
+
+    res.json(turnoCancelado);
   } catch (err) { next(err); }
 }
 
@@ -176,7 +204,25 @@ async function cambiarEstado(req, res, next) {
           SET estado_cuenta = 'suspendido', suspension_hasta = $1 
           WHERE id = $2
         `, [fechaSuspension.toISOString(), paciente_id]);
+
+        await notificarYEnviar({
+          paciente_id: paciente_id,
+          turno_id: turnoActualizado.id,
+          tipo: 'paciente_suspendido',
+          titulo: 'Cuenta suspendida',
+          mensaje: 'Tu cuenta ha sido temporalmente suspendida debido a reiteradas inasistencias a turnos sin previo aviso.',
+          claveIdempotencia: `paciente_suspendido:${paciente_id}:${Date.now()}`
+        });
       }
+
+      await notificarYEnviar({
+        paciente_id: paciente_id,
+        turno_id: turnoActualizado.id,
+        tipo: 'turno_ausente',
+        titulo: 'Inasistencia a turno',
+        mensaje: `Se ha registrado una inasistencia a tu turno del día de hoy. Acumular inasistencias derivará en una suspensión automática.`,
+        claveIdempotencia: `turno_ausente:${turnoActualizado.id}`
+      });
     }
 
     res.json(turnoActualizado);

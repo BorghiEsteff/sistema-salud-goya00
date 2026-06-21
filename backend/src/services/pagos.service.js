@@ -1,6 +1,7 @@
 const crypto = require('crypto');
 const db = require('../config/db');
 const { preference, payment, client } = require('../config/mercadopago');
+const { notificarYEnviar } = require('./notificaciones.service');
 
 async function crearPreferencia(turnoId, pacienteId) {
   const result = await db.query(`
@@ -101,6 +102,18 @@ async function procesarWebhook(req) {
         SET mp_payment_id = $1, estado = 'pagado', pagado_en = NOW(), actualizado_en = NOW()
         WHERE turno_id = $2
       `, [paymentId, turnoId]);
+      
+      const tInfo = await db.query('SELECT paciente_id FROM turnos WHERE id = $1', [turnoId]);
+      if (tInfo.rows[0]) {
+        await notificarYEnviar({
+          paciente_id: tInfo.rows[0].paciente_id,
+          turno_id: turnoId,
+          tipo: 'pago_confirmado',
+          titulo: 'Pago confirmado',
+          mensaje: 'Tu pago fue procesado exitosamente y el turno está confirmado.',
+          claveIdempotencia: `pago_confirmado:${turnoId}`
+        });
+      }
     } else if (payData.status === 'rejected' || payData.status === 'cancelled') {
       await db.query(`
         UPDATE turnos SET estado_pago = 'pendiente' WHERE id = $1
@@ -132,6 +145,18 @@ async function reembolsar(turnoId) {
     SET mp_refund_id = $1, estado = 'reembolso_pendiente', actualizado_en = NOW()
     WHERE turno_id = $2
   `, [refundData.id, turnoId]);
+
+  const tInfo = await db.query('SELECT paciente_id FROM turnos WHERE id = $1', [turnoId]);
+  if (tInfo.rows[0]) {
+    await notificarYEnviar({
+      paciente_id: tInfo.rows[0].paciente_id,
+      turno_id: turnoId,
+      tipo: 'reembolso_procesado',
+      titulo: 'Reembolso procesado',
+      mensaje: 'Se ha procesado el reembolso de tu turno cancelado.',
+      claveIdempotencia: `reembolso_procesado:${turnoId}`
+    });
+  }
 }
 
 module.exports = { crearPreferencia, procesarWebhook, reembolsar };

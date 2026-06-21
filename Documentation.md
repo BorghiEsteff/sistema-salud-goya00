@@ -31,6 +31,7 @@ Salud Goya es una plataforma digital integral diseñada para la gestión de turn
 | M5 | Panel de Auditoría y Control de Suspensiones |
 | M6 | Pagos Online (Integración con MercadoPago) |
 | M7 | Panel de Informes y KPIs |
+| M8 | Sistema de Notificaciones (Email + Web) |
 
 ## 1.4 Requerimientos Funcionales
 
@@ -48,6 +49,7 @@ Salud Goya es una plataforma digital integral diseñada para la gestión de turn
 | RF-10 | El Médico o Admin pueden configurar modalidad de pago (presencial o prepago) y precio de consulta. | Media |
 | RF-11 | El Paciente debe pagar vía MercadoPago para confirmar turnos de modalidad prepago (salvo que tenga obra social). | Media |
 | RF-12 | El Admin puede ver un panel de Informes con gráficos de turnos y recaudación. | Baja |
+| RF-13 | El Paciente recibirá notificaciones web e email ante eventos clave (reserva, cancelación, suspensión, pagos). | Media |
 
 ## 1.5 Requerimientos No Funcionales
 
@@ -77,7 +79,8 @@ Salud Goya es una plataforma digital integral diseñada para la gestión de turn
 - **Entorno:** Node.js.
 - **Framework:** Express.js.
 - **Base de Datos:** PostgreSQL.
-- **Librerías Clave:** `pg` (driver BD), `jsonwebtoken` (Auth), `bcryptjs` (Seguridad), `multer` + `cloudinary` (Archivos), `mercadopago` (Procesamiento de pagos y reembolsos).
+- **Librerías Clave:** `pg` (driver BD), `jsonwebtoken` (Auth), `bcryptjs` (Seguridad), `multer` + `cloudinary` (Archivos), `mercadopago` (Procesamiento de pagos y reembolsos), `nodemailer` (Envío de correos electrónicos vía Gmail).
+- **Decisión Técnica:** El envío de correos se configuró utilizando Gmail con una Contraseña de Aplicación en lugar de un proveedor transaccional como Resend por restricciones de validación de dominios, cubriendo perfectamente el volumen requerido.
 
 ## 2.2 Arquitectura del Sistema
 
@@ -105,18 +108,20 @@ Salud Goya es una plataforma digital integral diseñada para la gestión de turn
 salud-goya/
 ├── backend/
 │   ├── src/
-│   │   ├── config/ (db.js, cloudinary.js)
-│   │   ├── controllers/ (auth, admin, medicos, turnos, pagos, informes, etc.)
+│   │   ├── config/ (db.js, cloudinary.js, email.js)
+│   │   ├── controllers/ (auth, admin, medicos, turnos, pagos, informes, notificaciones.controller.js, etc.)
 │   │   ├── middleware/ (auth.js, roles.js, upload.js)
-│   │   ├── routes/ (endpoints de la API)
-│   │   ├── services/ (disponibilidad.service, pagos.service.js)
+│   │   ├── routes/ (endpoints de la API, notificaciones.routes.js)
+│   │   ├── services/ (disponibilidad.service, pagos.service.js, notificaciones.service.js)
+│   │   ├── templates/
+│   │   │   └── emails/ (turno-reservado.js, etc.)
 │   │   └── app.js
 │   ├── sql/ (scripts de creación de BD)
 │   └── index.js (Punto de entrada)
 ├── frontend/
 │   └── public/
 │       ├── css/
-│       ├── js/ (api.js, admin.js, medico.js, paciente.js, secretaria.js, informes.js)
+│       ├── js/ (api.js, admin.js, medico.js, paciente.js, secretaria.js, informes.js, notificaciones.js)
 │       └── *.html (Vistas, checkout-pago.html, pago-exitoso.html)
 └── package.json
 ```
@@ -163,6 +168,12 @@ salud-goya/
 | `GET` | `/api/pacientes` | Listar todos los pacientes | Admin, Sec |
 | `GET` | `/api/pacientes/:id` | Ver perfil de paciente por ID | Admin, Sec |
 | `PUT` | `/api/pacientes/:id` | Actualizar perfil de paciente por ID | Admin, Sec |
+| **Notificaciones** | `/api/notificaciones` | | |
+| `GET` | `/api/notificaciones` | Listar notificaciones del paciente | Paciente |
+| `GET` | `/api/notificaciones/no-leidas/count` | Cantidad de notificaciones no leídas | Paciente |
+| `PUT` | `/api/notificaciones/:id/leida` | Marcar notificación específica como leída | Paciente |
+| `PUT` | `/api/notificaciones/marcar-todas-leidas`| Marcar todas como leídas | Paciente |
+| `POST` | `/api/notificaciones/job/recordatorios` | Job cron para enviar recordatorios (solo con Header secreto) | Público/Cron |
 | **Pagos** | `/api/pagos` | | |
 | `POST` | `/api/pagos/crear-preferencia` | Generar link de pago MP | Paciente |
 | `POST` | `/api/pagos/webhook` | Webhook asíncrono para MercadoPago | Sistema MP |
@@ -272,6 +283,7 @@ El backend está estructurado con una clara separación de responsabilidades:
 - `historia_clinica`: Evoluciones médicas ligadas a un turno y paciente.
 - `archivos_adjuntos`: URLs de recursos subidos a la nube.
 - `pagos`: Tracking financiero y metadatos de MercadoPago (payment_id, monto, moneda).
+- `notificaciones`: Centro de mensajes in-app y registro de emails enviados al paciente.
 - `logs_auditoria`: Registro automático e inmutable de cambios en la BD.
 
 ---
@@ -422,5 +434,15 @@ Incorporación de un motor de reportes básicos.
 - **Frontend:** Inclusión de `chart.min.js`. Gráficos de torta (turnos por estado) y barras (pagos) en el Panel de Administración.
 
 **Archivos modificados:** `informes.controller.js`, `informes.routes.js`, `app.js`, `dashboard-admin.html`, `informes.js`.
+
+---
+
+### Sprint 16 — Sistema de Notificaciones (Email + Web)
+Se desarrolló un sistema de notificaciones asíncronas para mejorar la comunicación con los pacientes, sin impactar los tiempos de respuesta de la API.
+- **Backend:** Uso de `nodemailer` con Gmail App Passwords. Creación de `notificaciones.service.js` (con plantillas desacopladas) que dispara los emails mediante un patrón "fire-and-forget". Integrado en el ciclo de vida de los turnos (reservado, cancelado, ausente), suspensión de cuenta, y pagos de MercadoPago. Se añadió un endpoint CRON (`/job/recordatorios`) protegido por secreto para disparar recordatorios de turnos a las 24 horas.
+- **Frontend:** Implementación de una "Campana de notificaciones" en el header del portal de pacientes con contador de mensajes no leídos (polling dinámico) y capacidad de lectura interactiva.
+
+**Archivos nuevos:** `06_notificaciones.sql`, `notificaciones.controller.js`, `notificaciones.routes.js`, `notificaciones.service.js`, `js/notificaciones.js`, y carpeta `templates/emails/`.
+**Archivos modificados:** `turnos.controller.js`, `pagos.service.js`, `dashboard-paciente.html`, `app.js`.
 
 

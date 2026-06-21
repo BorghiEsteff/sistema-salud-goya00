@@ -13,6 +13,7 @@ const adminRoutes = require('./routes/admin.routes');
 const publicRoutes = require('./routes/public.routes');
 const pagosRoutes = require('./routes/pagos.routes');
 const informesRoutes = require('./routes/informes.routes');
+const notificacionesRoutes = require('./routes/notificaciones.routes');
 
 const app = express();
 
@@ -55,6 +56,8 @@ app.use('/api/archivos', archivosRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/admin/informes', informesRoutes);
 app.use('/api/pagos', pagosRoutes);
+app.use('/api/informes', informesRoutes);
+app.use('/api/notificaciones', notificacionesRoutes);
 
 app.use('/api/public', publicRoutes);
 
