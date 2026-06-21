@@ -132,16 +132,30 @@ let horaSeleccionada = null;
 
 async function inicializarReserva() {
   document.getElementById('reserva-especialidad').innerHTML = '<option value="">Cargando especialidades...</option>';
+  document.getElementById('grilla-especialidades').innerHTML = '';
   try {
-    const especialidades = await api.get('/public/especialidades');
+    const especialidades = await api.get('/public/especialidades?solo_con_medicos=true');
     let html = '<option value="">Seleccione especialidad</option>';
-    especialidades.forEach(e => html += `<option value="${e.id}">${e.nombre}</option>`);
+    let grillaHtml = '';
+    especialidades.forEach(e => {
+      html += `<option value="${e.id}">${e.nombre}</option>`;
+      grillaHtml += `<button type="button" class="btn btn-secondary btn-especialidad" data-id="${e.id}" onclick="seleccionarEspecialidad('${e.id}')">${e.nombre}</button>`;
+    });
     document.getElementById('reserva-especialidad').innerHTML = html;
+    document.getElementById('grilla-especialidades').innerHTML = grillaHtml;
   } catch(err) {
     document.getElementById('reserva-especialidad').innerHTML = '<option value="">Error al cargar</option>';
     alert('Error cargando especialidades: ' + err.message);
   }
 }
+
+window.seleccionarEspecialidad = function(id) {
+  const select = document.getElementById('reserva-especialidad');
+  select.value = id;
+  select.dispatchEvent(new Event('change'));
+  document.querySelectorAll('.btn-especialidad').forEach(b => b.style.background = 'rgba(255, 255, 255, 0.05)');
+  document.querySelector(`.btn-especialidad[data-id="${id}"]`).style.background = 'var(--primary-color)';
+};
 
 document.getElementById('reserva-especialidad').addEventListener('change', async (e) => {
   const espId = e.target.value;
@@ -160,16 +174,30 @@ document.getElementById('reserva-especialidad').addEventListener('change', async
   }
   
   comboMedico.innerHTML = '<option value="">Cargando médicos...</option>';
+  document.getElementById('grilla-medicos').innerHTML = '';
   try {
     medicosCache = await api.get(`/public/medicos?especialidad_id=${espId}`);
     let html = '<option value="">Seleccione médico</option>';
-    medicosCache.forEach(m => html += `<option value="${m.id}">${m.nombre} ${m.apellido}</option>`);
+    let grillaHtml = '';
+    medicosCache.forEach(m => {
+      html += `<option value="${m.id}">${m.nombre} ${m.apellido}</option>`;
+      grillaHtml += `<button type="button" class="btn btn-secondary btn-medico" data-id="${m.id}" onclick="seleccionarMedico('${m.id}')">${m.nombre} ${m.apellido}</button>`;
+    });
     comboMedico.innerHTML = html;
+    document.getElementById('grilla-medicos').innerHTML = grillaHtml;
     comboMedico.disabled = false;
   } catch(err) {
     comboMedico.innerHTML = '<option value="">Error al cargar</option>';
   }
 });
+
+window.seleccionarMedico = function(id) {
+  const select = document.getElementById('reserva-medico');
+  select.value = id;
+  select.dispatchEvent(new Event('change'));
+  document.querySelectorAll('.btn-medico').forEach(b => b.style.background = 'rgba(255, 255, 255, 0.05)');
+  document.querySelector(`.btn-medico[data-id="${id}"]`).style.background = 'var(--primary-color)';
+};
 
 document.getElementById('reserva-medico').addEventListener('change', (e) => {
   const inputFecha = document.getElementById('reserva-fecha');
@@ -210,9 +238,13 @@ document.getElementById('btn-buscar-turnos').addEventListener('click', async () 
       return;
     }
     
-    data.disponibles.forEach(hora => {
-      const horaCorta = hora.substr(0, 5);
-      grilla.innerHTML += `<button class="btn btn-secondary btn-hora" onclick="seleccionarHora(this, '${hora}')">${horaCorta}</button>`;
+    data.disponibles.forEach(item => {
+      const horaCorta = item.hora.substr(0, 5);
+      if (item.disponible) {
+        grilla.innerHTML += `<button type="button" class="btn btn-secondary btn-hora" onclick="seleccionarHora(this, '${item.hora}')">${horaCorta}</button>`;
+      } else {
+        grilla.innerHTML += `<button type="button" class="btn btn-hora" style="background:var(--danger-color); color:white; opacity:0.6; cursor:not-allowed;" disabled>${horaCorta}</button>`;
+      }
     });
   } catch(err) {
     alert(err.message);

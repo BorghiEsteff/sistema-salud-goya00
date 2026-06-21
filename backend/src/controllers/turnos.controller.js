@@ -21,7 +21,10 @@ async function getDisponibilidad(req, res, next) {
     `, [medico_id, fecha]);
     
     const ocupados = result.rows.map(r => r.hora_inicio);
-    const disponibles = horariosPosibles.filter(h => !ocupados.includes(h));
+    const disponibles = horariosPosibles.map(h => ({
+      hora: h,
+      disponible: !ocupados.includes(h)
+    }));
 
     res.json({ disponibles });
   } catch (err) { next(err); }
@@ -56,12 +59,40 @@ async function reservarTurno(req, res, next) {
     horaF.setMinutes(horaF.getMinutes() + 30);
     const hora_fin = horaF.toISOString().substr(11, 8);
 
-    const result = await db.query(`
-      INSERT INTO turnos (paciente_id, medico_id, especialidad_id, fecha_turno, hora_inicio, hora_fin, estado, motivo_consulta, creado_por)
-      VALUES ($1, $2, $3, $4, $5, $6, 'solicitado', $7, $8) RETURNING *
-    `, [paciente_id, medico_id, especialidad_id, fecha_turno, hora_inicio, hora_fin, motivo_consulta, req.usuario.id]);
+    // Lógica de pagos (Sprint 4)
+    const mRes = await db.query('SELECT modalidad_pago, precio_consulta FROM medicos WHERE id = $1', [medico_id]);
+    const pRes = await db.query('SELECT obra_social FROM pacientes WHERE id = $1', [paciente_id]);
+    
+    if (!mRes.rows[0]) return res.status(404).json({ error: 'Médico no encontrado' });
+    if (!pRes.rows[0]) return res.status(404).json({ error: 'Paciente no encontrado' });
 
-    res.status(201).json(result.rows[0]);
+    const modalidad = mRes.rows[0].modalidad_pago;
+    const precio = mRes.rows[0].precio_consulta || 0;
+    const obraSocial = pRes.rows[0].obra_social;
+
+    let estado = 'solicitado';
+    let estado_pago = 'pendiente';
+
+    if (obraSocial || modalidad === 'on_site') {
+      estado = 'confirmado';
+      estado_pago = 'no_requerido';
+    }
+
+    const result = await db.query(`
+      INSERT INTO turnos (paciente_id, medico_id, especialidad_id, fecha_turno, hora_inicio, hora_fin, estado, motivo_consulta, creado_por, estado_pago)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *
+    `, [paciente_id, medico_id, especialidad_id, fecha_turno, hora_inicio, hora_fin, estado, motivo_consulta, req.usuario.id, estado_pago]);
+
+    const turnoActualizado = result.rows[0];
+
+    if (estado_pago === 'pendiente') {
+      await db.query(`
+        INSERT INTO pagos (turno_id, paciente_id, monto, moneda, estado)
+        VALUES ($1, $2, $3, 'ARS', 'pendiente')
+      `, [turnoActualizado.id, paciente_id, precio]);
+    }
+
+    res.status(201).json(turnoActualizado);
   } catch (err) { next(err); }
 }
 
@@ -71,10 +102,26 @@ async function cancelarTurno(req, res, next) {
     const { id } = req.params;
     const { motivo_cancelacion } = req.body;
 
+    const t = await db.query('SELECT paciente_id, estado_pago FROM turnos WHERE id = $1', [id]);
+    const turno = t.rows[0];
+    if (!turno) return res.status(404).json({ error: 'Turno no encontrado' });
+
     if (req.usuario.rol === 'paciente') {
-      const t = await db.query('SELECT paciente_id FROM turnos WHERE id = $1', [id]);
-      if (!t.rows[0] || t.rows[0].paciente_id !== req.usuario.paciente_id) {
+      if (turno.paciente_id !== req.usuario.paciente_id) {
         return res.status(403).json({ error: 'No tienes permiso para cancelar este turno.' });
+      }
+      if (turno.estado_pago === 'pagado') {
+        return res.status(403).json({ error: 'El turno ya fue pagado y no puede cancelarse desde aquí. Por favor, acércate al consultorio.' });
+      }
+    }
+
+    // Si es admin/secretaria y está pagado -> reembolso
+    if ((req.usuario.rol === 'admin' || req.usuario.rol === 'secretaria') && turno.estado_pago === 'pagado') {
+      const pagosService = require('../services/pagos.service');
+      try {
+        await pagosService.reembolsar(id);
+      } catch (err) {
+        return res.status(500).json({ error: 'Error al procesar el reembolso en MP: ' + err.message });
       }
     }
 

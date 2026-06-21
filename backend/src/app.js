@@ -11,6 +11,7 @@ const historiasRoutes = require('./routes/historias.routes');
 const archivosRoutes = require('./routes/archivos.routes');
 const adminRoutes = require('./routes/admin.routes');
 const publicRoutes = require('./routes/public.routes');
+const pagosRoutes = require('./routes/pagos.routes');
 
 const app = express();
 
@@ -32,6 +33,10 @@ app.use(cors({
     }
   }
 }));
+
+// Webhook de MercadoPago: requiere raw body para validar la firma
+app.use('/api/pagos/webhook', express.raw({ type: 'application/json' }), require('./controllers/pagos.controller').webhook);
+
 app.use(express.json());
 
 // Servir frontend estático directamente desde Node para evitar CORS de 'file://'
@@ -47,6 +52,7 @@ app.use('/api/turnos', turnosRoutes);
 app.use('/api/historias', historiasRoutes);
 app.use('/api/archivos', archivosRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/pagos', pagosRoutes);
 
 app.use('/api/public', publicRoutes);
 
