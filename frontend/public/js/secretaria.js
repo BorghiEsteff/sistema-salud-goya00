@@ -8,17 +8,31 @@ document.addEventListener('DOMContentLoaded', () => {
   const hoy = new Date().toISOString().split('T')[0];
   document.getElementById('fecha-filtro').value = hoy;
   document.getElementById('fecha-filtro').addEventListener('change', cargarAgenda);
+  document.getElementById('filtro-pago').addEventListener('change', cargarAgenda);
   cargarAgenda();
 });
 
+function getPagoIndicator(estado_pago) {
+  switch(estado_pago) {
+    case 'pendiente': return '<span class="badge" style="background:#eab308;color:#fff;">💳 Pendiente</span>';
+    case 'pagado': return '<span class="badge" style="background:#10b981;color:#fff;">✅ Pagado</span>';
+    case 'reembolso_pendiente': return '<span class="badge" style="background:#f97316;color:#fff;">🔄 Reembolso Pdte.</span>';
+    case 'reembolsado': return '<span class="badge" style="background:#64748b;color:#fff;">↩️ Reembolsado</span>';
+    default: return '-';
+  }
+}
+
 async function cargarAgenda() {
   const fecha = document.getElementById('fecha-filtro').value;
+  const pagoFiltro = document.getElementById('filtro-pago').value;
   const tbody = document.getElementById('tabla-agenda');
   try {
-    const data = await api.get(`/turnos?fecha=${fecha}`);
+    let url = `/turnos?fecha=${fecha}`;
+    if (pagoFiltro) url += `&estado_pago=${pagoFiltro}`;
+    const data = await api.get(url);
     tbody.innerHTML = '';
     if(data.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="3">No hay turnos para este día.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="6">No hay turnos para este día y filtro.</td></tr>';
       return;
     }
     data.forEach(turno => {
@@ -27,13 +41,14 @@ async function cargarAgenda() {
           <td>${turno.hora_inicio.substr(0,5)}</td>
           <td>${turno.paciente_nombre} ${turno.paciente_apellido}</td>
           <td>${turno.medico_nombre} ${turno.medico_apellido}</td>
+          <td>${getPagoIndicator(turno.estado_pago)}</td>
           <td><span class="badge ${turno.estado}">${turno.estado}</span></td>
           <td>
             ${turno.estado === 'solicitado' ? `
               <button onclick="cambiarEstado('${turno.id}', 'confirmado')" style="color:var(--primary-color);background:none;border:none;cursor:pointer;font-weight:bold;">Confirmar</button>
             ` : '-'}
             ${(turno.estado === 'solicitado' || turno.estado === 'confirmado') ? `
-              <button onclick="cancelarTurno('${turno.id}')" style="color:var(--danger-color);background:none;border:none;cursor:pointer;font-weight:bold;margin-left:10px;">Cancelar</button>
+              <button onclick="cancelarTurno('${turno.id}', '${turno.estado_pago}')" style="color:var(--danger-color);background:none;border:none;cursor:pointer;font-weight:bold;margin-left:10px;">Cancelar</button>
             ` : ''}
           </td>
         </tr>
@@ -81,9 +96,19 @@ async function cambiarEstado(id, nuevoEstado) {
 
 let turnoACancelar = null;
 
-function cancelarTurno(id) {
+function cancelarTurno(id, estadoPago) {
   turnoACancelar = id;
-  document.getElementById('motivo-cancelacion-input').value = '';
+  const motivoInput = document.getElementById('motivo-cancelacion-input');
+  motivoInput.value = '';
+  
+  if (estadoPago === 'pagado') {
+    motivoInput.placeholder = 'Ej. Ausente sin aviso (Se procesará REEMBOLSO automático al cancelar)';
+    motivoInput.style.border = '2px solid var(--danger-color)';
+  } else {
+    motivoInput.placeholder = 'Ej. Ausente sin aviso';
+    motivoInput.style.border = '';
+  }
+  
   document.getElementById('cancelar-modal').classList.remove('hidden');
 }
 

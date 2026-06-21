@@ -29,6 +29,8 @@ Salud Goya es una plataforma digital integral diseñada para la gestión de turn
 | M3 | Sistema de Turnos (Reserva, Cancelación, Reprogramación) |
 | M4 | Historias Clínicas Electrónicas (HCE) y Archivos Adjuntos |
 | M5 | Panel de Auditoría y Control de Suspensiones |
+| M6 | Pagos Online (Integración con MercadoPago) |
+| M7 | Panel de Informes y KPIs |
 
 ## 1.4 Requerimientos Funcionales
 
@@ -43,6 +45,9 @@ Salud Goya es una plataforma digital integral diseñada para la gestión de turn
 | RF-07 | El médico puede subir archivos adjuntos (recetas, estudios) a la nube (Cloudinary). | Alta |
 | RF-08 | El Admin puede crear, activar/inactivar y eliminar físicamente pacientes/médicos/especialidades. | Alta |
 | RF-09 | El Admin tiene acceso a un log de auditoría inmutable de todas las acciones del sistema. | Alta |
+| RF-10 | El Médico o Admin pueden configurar modalidad de pago (presencial o prepago) y precio de consulta. | Media |
+| RF-11 | El Paciente debe pagar vía MercadoPago para confirmar turnos de modalidad prepago (salvo que tenga obra social). | Media |
+| RF-12 | El Admin puede ver un panel de Informes con gráficos de turnos y recaudación. | Baja |
 
 ## 1.5 Requerimientos No Funcionales
 
@@ -65,13 +70,14 @@ Salud Goya es una plataforma digital integral diseñada para la gestión de turn
 - **Lenguajes:** HTML5, CSS3, JavaScript (ES6+) Vanilla.
 - **Comunicación:** `fetch` API.
 - **Variables de Entorno:** Configuración dinámica de la URL del backend mediante `window.ENV_API_URL` para facilitar despliegues en plataformas como Vercel.
+- **Librerías Externas:** MercadoPago SDK (vía CDN), Chart.js (vía CDN para informes). Excepción al uso de "cero librerías" justificada por la complejidad gráfica y la seguridad del checkout de pagos.
 - **UI/UX:** CSS nativo (Variables, Flexbox, Grid), sin frameworks pesados para máxima performance. Reemplazo de alertas nativas del navegador por un sistema de notificaciones custom (`visualConfirm`, `showGlobalError`).
 
 ### Backend
 - **Entorno:** Node.js.
 - **Framework:** Express.js.
 - **Base de Datos:** PostgreSQL.
-- **Librerías Clave:** `pg` (driver BD), `jsonwebtoken` (Auth), `bcryptjs` (Seguridad), `multer` + `cloudinary` (Archivos).
+- **Librerías Clave:** `pg` (driver BD), `jsonwebtoken` (Auth), `bcryptjs` (Seguridad), `multer` + `cloudinary` (Archivos), `mercadopago` (Procesamiento de pagos y reembolsos).
 
 ## 2.2 Arquitectura del Sistema
 
@@ -100,18 +106,18 @@ salud-goya/
 ├── backend/
 │   ├── src/
 │   │   ├── config/ (db.js, cloudinary.js)
-│   │   ├── controllers/ (auth, admin, medicos, etc.)
+│   │   ├── controllers/ (auth, admin, medicos, turnos, pagos, informes, etc.)
 │   │   ├── middleware/ (auth.js, roles.js, upload.js)
 │   │   ├── routes/ (endpoints de la API)
-│   │   ├── services/ (lógica de negocio extra)
+│   │   ├── services/ (disponibilidad.service, pagos.service.js)
 │   │   └── app.js
 │   ├── sql/ (scripts de creación de BD)
 │   └── index.js (Punto de entrada)
 ├── frontend/
 │   └── public/
 │       ├── css/
-│       ├── js/ (api.js, admin.js, medico.js, paciente.js)
-│       └── *.html (Vistas)
+│       ├── js/ (api.js, admin.js, medico.js, paciente.js, secretaria.js, informes.js)
+│       └── *.html (Vistas, checkout-pago.html, pago-exitoso.html)
 └── package.json
 ```
 
@@ -126,6 +132,7 @@ salud-goya/
 | `DELETE` | `/api/admin/especialidades/:id` | Eliminar especialidad por ID | Admin |
 | `GET` | `/api/admin/medicos` | Listar todos los médicos | Admin |
 | `POST` | `/api/admin/medicos` | Crear nuevo perfil médico | Admin |
+| `PUT` | `/api/admin/medicos/:id` | Actualizar médico (precio y modalidad de pago) | Admin |
 | `PUT` | `/api/admin/medicos/:id/estado` | Activar o inactivar médico | Admin |
 | `PUT` | `/api/admin/pacientes/:id/estado` | Activar o inactivar paciente | Admin |
 | `PUT` | `/api/admin/pacientes/:id/levantar-suspension`| Levantar suspensión automática de un paciente | Admin |
@@ -135,6 +142,9 @@ salud-goya/
 | `GET` | `/api/admin/secretarias` | Listar perfiles de secretaría | Admin |
 | `POST` | `/api/admin/secretarias` | Crear nuevo perfil de secretaría | Admin |
 | `PUT` | `/api/admin/secretarias/:id/estado` | Activar o inactivar secretaría | Admin |
+| `GET` | `/api/admin/informes/resumen` | Estadísticas generales y totales | Admin |
+| `GET` | `/api/admin/informes/pagos` | Serie temporal de pagos | Admin |
+| `GET` | `/api/admin/informes/turnos-por-estado` | Agrupación de turnos por estado | Admin |
 | **Auth** | `/api/auth` | | |
 | `POST` | `/api/auth/login` | Autenticación y generación de JWT | Público |
 | **Archivos** | `/api/archivos` | | |
@@ -153,6 +163,9 @@ salud-goya/
 | `GET` | `/api/pacientes` | Listar todos los pacientes | Admin, Sec |
 | `GET` | `/api/pacientes/:id` | Ver perfil de paciente por ID | Admin, Sec |
 | `PUT` | `/api/pacientes/:id` | Actualizar perfil de paciente por ID | Admin, Sec |
+| **Pagos** | `/api/pagos` | | |
+| `POST` | `/api/pagos/crear-preferencia` | Generar link de pago MP | Paciente |
+| `POST` | `/api/pagos/webhook` | Webhook asíncrono para MercadoPago | Sistema MP |
 | **Público** | `/api/public` | | |
 | `GET` | `/api/public/especialidades` | Listar especialidades para combos | Público |
 | `GET` | `/api/public/medicos` | Listar médicos para combos | Público |
@@ -253,11 +266,12 @@ El backend está estructurado con una clara separación de responsabilidades:
 
 ## 5.3 Modelo de Base de Datos Resumido (Tablas)
 - `usuarios`: Credenciales de acceso y rol.
-- `pacientes` / `medicos`: Perfiles extendidos asociados a un `usuario_id`.
+- `pacientes` / `medicos`: Perfiles extendidos. Medicos incluyen `precio_consulta` y `modalidad_pago`.
 - `especialidades`: Áreas médicas.
-- `turnos`: Relaciona paciente, médico, fecha y estado.
+- `turnos`: Relaciona paciente, médico, fecha y estado. Incluye `estado_pago`.
 - `historia_clinica`: Evoluciones médicas ligadas a un turno y paciente.
 - `archivos_adjuntos`: URLs de recursos subidos a la nube.
+- `pagos`: Tracking financiero y metadatos de MercadoPago (payment_id, monto, moneda).
 - `logs_auditoria`: Registro automático e inmutable de cambios en la BD.
 
 ---
@@ -373,4 +387,32 @@ Se implementó el CRUD completo para gestionar perfiles de Secretaría desde el 
 - **Frontend:** Nueva pestaña "Secretarías" en el panel. Creación de cuenta con generación y muestra de contraseña temporal compartiendo el modal seguro existente.
 
 **Archivos modificados:** `admin.controller.js`, `admin.routes.js`, `dashboard-admin.html`, `admin.js`.
+
+---
+
+### Sprint 12 — Preparación de Infraestructura y SDK de Pagos
+Se sentaron las bases para la integración financiera con MercadoPago SDK.
+- **Backend:** Adición del SDK de MP (`mercadopago`), migración de BD añadiendo campos `modalidad_pago`, `precio_consulta` a médicos; y `estado_pago` a turnos. Creación de tabla `pagos`. Middleware de `express.raw` para validar webhooks de MP (HMAC-SHA256).
+
+---
+
+### Sprint 13 — Lógica de Reserva Condicionada y Checkout
+Se reescribió el flujo de `reservarTurno` para generar pagos pendientes y preferencias de MP.
+- **Backend:** `pagos.controller.js` con método `crearPreferencia` y `webhook`. Si el paciente no tiene obra social y el médico es prepago, se inserta pago 'pendiente'.
+- **Frontend:** Flujo del paciente incluye redirección al checkout vía SDK en `checkout-pago.html` y callbacks en `pago-exitoso.html`.
+
+---
+
+### Sprint 14 — Módulo de Pagos (Backoffice)
+Habilitación a la secretaría y administradores de ver la trazabilidad y cancelar con reembolsos.
+- **Backend:** `cancelarTurno` implementa reembolso automático si el `estado_pago` es 'pagado'.
+- **Frontend:** Vista de Secretaría mejorada con columna "Pago", filtrado por estado de pago y alertas de reembolso en cancelación. Vista de Admin mejorada con modal "Editar Médico" para fijar precios y modalidad de cobro.
+
+---
+
+### Sprint 15 — Panel de Informes (Chart.js)
+Incorporación de un motor de reportes básicos.
+- **Backend:** Endpoints agregados en `/api/admin/informes` para series temporales y agrupación de estados.
+- **Frontend:** Inclusión de `chart.min.js`. Gráficos de torta (turnos por estado) y barras (pagos) en el Panel de Administración.
+
 

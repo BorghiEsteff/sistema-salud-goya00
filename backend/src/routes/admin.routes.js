@@ -16,6 +16,7 @@ router.delete('/especialidades/:id', adminController.deleteEspecialidad);
 // Médicos
 router.get('/medicos', adminController.getMedicos);
 router.post('/medicos', adminController.createMedico);
+router.put('/medicos/:id', adminController.updateMedico);
 router.put('/medicos/:id/estado', adminController.toggleMedicoStatus);
 
 // Secretarías

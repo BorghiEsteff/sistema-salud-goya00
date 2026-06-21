@@ -75,7 +75,10 @@ async function cargarMedicos() {
           <td>${med.especialidad || '-'}</td>
           <td>${med.email}</td>
           <td><span class="badge" style="background:${badgeColor}; color:#fff">${badgeText}</span></td>
-          <td><button onclick="toggleMedicoStatus('${med.id}', ${!med.activo})" style="color:${actionColor};background:none;border:none;cursor:pointer;font-weight:bold;">${actionText}</button></td>
+          <td>
+            <button onclick="abrirEditarMedico('${med.id}', ${med.precio_consulta || 0}, '${med.modalidad_pago || 'on_site'}')" style="margin-right:5px; color:var(--primary-color); background:none; border:none; cursor:pointer; font-weight:bold;">Editar</button>
+            <button onclick="toggleMedicoStatus('${med.id}', ${!med.activo})" style="color:${actionColor};background:none;border:none;cursor:pointer;font-weight:bold;">${actionText}</button>
+          </td>
         </tr>
       `;
     });
@@ -267,6 +270,36 @@ document.getElementById('form-medico').addEventListener('submit', async (e) => {
   } finally {
     btn.disabled = false;
     btn.innerText = 'Generar y Guardar';
+  }
+});
+
+// --- EDITAR MÉDICO ---
+window.abrirEditarMedico = function(id, precio, modalidad) {
+  document.getElementById('edit-med-id').value = id;
+  document.getElementById('edit-med-precio').value = precio;
+  document.getElementById('edit-med-modalidad').value = modalidad;
+  document.getElementById('modal-editar-medico').classList.remove('hidden');
+};
+
+document.getElementById('form-editar-medico').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const id = document.getElementById('edit-med-id').value;
+  const precio_consulta = document.getElementById('edit-med-precio').value;
+  const modalidad_pago = document.getElementById('edit-med-modalidad').value;
+  
+  const btn = document.getElementById('btn-guardar-edicion-medico');
+  btn.disabled = true;
+  btn.innerText = 'Guardando...';
+  
+  try {
+    await api.put(`/admin/medicos/${id}`, { precio_consulta, modalidad_pago });
+    document.getElementById('modal-editar-medico').classList.add('hidden');
+    cargarMedicos();
+  } catch(err) {
+    alert(err.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerText = 'Guardar Cambios';
   }
 });
 

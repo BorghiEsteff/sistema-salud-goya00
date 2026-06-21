@@ -186,7 +186,7 @@ async function cambiarEstado(req, res, next) {
 // 5. Listar turnos con filtros
 async function getTurnos(req, res, next) {
   try {
-    const { fecha, medico_id, paciente_id, estado } = req.query;
+    const { fecha, medico_id, paciente_id, estado, estado_pago } = req.query;
     let query = 'SELECT t.*, p.nombre as paciente_nombre, p.apellido as paciente_apellido, m.nombre as medico_nombre, m.apellido as medico_apellido, e.nombre as especialidad_nombre FROM turnos t JOIN pacientes p ON t.paciente_id = p.id JOIN medicos m ON t.medico_id = m.id LEFT JOIN especialidades e ON t.especialidad_id = e.id WHERE t.activo = TRUE';
     const values = [];
     let counter = 1;
@@ -194,6 +194,7 @@ async function getTurnos(req, res, next) {
     if (fecha) { query += ` AND t.fecha_turno = $${counter++}`; values.push(fecha); }
     if (medico_id) { query += ` AND t.medico_id = $${counter++}`; values.push(medico_id); }
     if (estado) { query += ` AND t.estado = $${counter++}`; values.push(estado); }
+    if (estado_pago) { query += ` AND t.estado_pago = $${counter++}`; values.push(estado_pago); }
 
     if (req.usuario.rol === 'paciente') {
       query += ` AND t.paciente_id = $${counter++}`; values.push(req.usuario.paciente_id);

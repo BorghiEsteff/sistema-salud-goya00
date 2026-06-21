@@ -12,6 +12,7 @@ const archivosRoutes = require('./routes/archivos.routes');
 const adminRoutes = require('./routes/admin.routes');
 const publicRoutes = require('./routes/public.routes');
 const pagosRoutes = require('./routes/pagos.routes');
+const informesRoutes = require('./routes/informes.routes');
 
 const app = express();
 
@@ -52,6 +53,7 @@ app.use('/api/turnos', turnosRoutes);
 app.use('/api/historias', historiasRoutes);
 app.use('/api/archivos', archivosRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/admin/informes', informesRoutes);
 app.use('/api/pagos', pagosRoutes);
 
 app.use('/api/public', publicRoutes);

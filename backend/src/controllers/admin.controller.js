@@ -35,7 +35,7 @@ async function deleteEspecialidad(req, res, next) {
 async function getMedicos(req, res, next) {
   try {
     const result = await db.query(`
-      SELECT m.id, m.nombre, m.apellido, m.matricula, m.telefono, m.activo, e.nombre as especialidad, u.email
+      SELECT m.id, m.nombre, m.apellido, m.matricula, m.telefono, m.activo, m.precio_consulta, m.modalidad_pago, e.nombre as especialidad, u.email
       FROM medicos m
       JOIN usuarios u ON m.usuario_id = u.id
       LEFT JOIN especialidades e ON m.especialidad_id = e.id
@@ -79,6 +79,24 @@ async function createMedico(req, res, next) {
   } finally {
     client.release();
   }
+}
+
+async function updateMedico(req, res, next) {
+  try {
+    const { id } = req.params;
+    const { precio_consulta, modalidad_pago } = req.body;
+    const result = await db.query(`
+      UPDATE medicos 
+      SET precio_consulta = $1, modalidad_pago = $2
+      WHERE id = $3 RETURNING *
+    `, [precio_consulta || 0, modalidad_pago || 'on_site', id]);
+    
+    if (result.rowCount === 0) return res.status(404).json({ error: 'Médico no encontrado' });
+    
+    await db.query(`INSERT INTO logs_auditoria (tabla_afectada, registro_id, accion, campo_modificado, valor_nuevo, usuario_id) VALUES ('medicos', $1, 'UPDATE', 'pagos', 'Precio o modalidad actualizados', $2)`, [id, req.usuario.id]);
+    
+    res.json(result.rows[0]);
+  } catch (err) { next(err); }
 }
 
 // --- SUSPENSIONES ---
@@ -407,7 +425,7 @@ async function toggleSecretariaStatus(req, res, next) {
 
 module.exports = {
   getEspecialidades, createEspecialidad, deleteEspecialidad, limpiarEspecialidadesVacias,
-  getMedicos, createMedico, toggleMedicoStatus,
+  getMedicos, createMedico, updateMedico, toggleMedicoStatus,
   getSecretarias, createSecretaria, toggleSecretariaStatus,
   togglePacienteStatus, levantarSuspension, deletePacienteFisico,
   getAuditoria, exportarAuditoriaCSV

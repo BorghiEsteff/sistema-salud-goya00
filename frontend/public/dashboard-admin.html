@@ -16,6 +16,7 @@
         <li><a href="#" id="nav-medicos">👨‍⚕️ Médicos</a></li>
         <li><a href="#" id="nav-secretarias">👩‍💻 Secretarías</a></li>
         <li><a href="#" id="nav-pacientes">🧑‍🤝‍🧑 Pacientes / Suspensiones</a></li>
+        <li><a href="#" id="nav-informes">📊 Informes</a></li>
         <li><a href="#" id="nav-auditoria">📋 Logs de Auditoría</a></li>
       </ul>
       <button class="logout-btn" onclick="window.logout()">Cerrar Sesión</button>
@@ -153,6 +154,46 @@
         </div>
         <div id="paginacion-auditoria" class="pagination-controls" style="display:flex; justify-content:center; gap:10px; margin-top:15px; padding-bottom:15px;"></div>
       </section>
+
+      <!-- Section: Informes -->
+      <section id="section-informes" class="card" style="display: none;">
+        <div class="card-header">
+          <h3>Panel de Informes</h3>
+          <div>
+            <input type="date" id="filtro-informes-desde" class="form-control" style="display:inline-block; width:auto; padding:5px; border-radius:5px;">
+            <input type="date" id="filtro-informes-hasta" class="form-control" style="display:inline-block; width:auto; padding:5px; border-radius:5px;">
+            <button class="btn btn-secondary" id="btn-filtrar-informes">Filtrar</button>
+          </div>
+        </div>
+        
+        <!-- KPIs -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 20px; margin-top: 10px;">
+          <div class="card" style="background: var(--surface-dark); padding: 20px; text-align: center; border: 1px solid var(--border-color);">
+            <h4 style="color: var(--text-secondary); margin-bottom: 10px;">Total Turnos</h4>
+            <div id="kpi-turnos" style="font-size: 2.5rem; font-weight: bold; color: var(--primary-color);">0</div>
+          </div>
+          <div class="card" style="background: var(--surface-dark); padding: 20px; text-align: center; border: 1px solid var(--border-color);">
+            <h4 style="color: var(--text-secondary); margin-bottom: 10px;">Recaudación MP</h4>
+            <div id="kpi-recaudacion" style="font-size: 2.5rem; font-weight: bold; color: var(--success-color);">0</div>
+          </div>
+          <div class="card" style="background: var(--surface-dark); padding: 20px; text-align: center; border: 1px solid var(--border-color);">
+            <h4 style="color: var(--text-secondary); margin-bottom: 10px;">Pacientes Activos</h4>
+            <div id="kpi-pacientes" style="font-size: 2.5rem; font-weight: bold; color: var(--secondary-color);">0</div>
+          </div>
+        </div>
+
+        <!-- Charts -->
+        <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 20px;">
+          <div class="card" style="background: var(--surface-dark); padding: 20px; border: 1px solid var(--border-color);">
+            <h4 style="color: var(--text-secondary); margin-bottom: 10px; text-align: center;">Turnos por Estado</h4>
+            <canvas id="chart-turnos-estado"></canvas>
+          </div>
+          <div class="card" style="background: var(--surface-dark); padding: 20px; border: 1px solid var(--border-color);">
+            <h4 style="color: var(--text-secondary); margin-bottom: 10px; text-align: center;">Pagos por Día (MercadoPago)</h4>
+            <canvas id="chart-pagos"></canvas>
+          </div>
+        </div>
+      </section>
       
       <!-- Modales -->
       <div id="modal-especialidad" class="modal hidden">
@@ -202,6 +243,32 @@
         </div>
       </div>
 
+      <div id="modal-editar-medico" class="modal hidden">
+        <div class="modal-content" style="max-width: 500px; padding: 2rem;">
+          <h3>Editar Médico (Precio y Cobro)</h3>
+          <form id="form-editar-medico" onsubmit="event.preventDefault();">
+            <input type="hidden" id="edit-med-id">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+              <div class="form-group">
+                <label for="edit-med-precio">Precio Consulta ($)</label>
+                <input type="number" id="edit-med-precio" class="form-control" step="0.01" min="0" required>
+              </div>
+              <div class="form-group">
+                <label for="edit-med-modalidad">Modalidad de Cobro</label>
+                <select id="edit-med-modalidad" class="form-control" required>
+                  <option value="on_site">En consultorio</option>
+                  <option value="prepaid">Pago previo (MercadoPago)</option>
+                </select>
+              </div>
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 1.5rem;">
+              <button type="submit" class="btn btn-primary" id="btn-guardar-edicion-medico" style="flex: 1;">Guardar Cambios</button>
+              <button type="button" class="btn btn-secondary" style="flex: 1;" onclick="document.getElementById('modal-editar-medico').classList.add('hidden')">Cancelar</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
       <div id="modal-secretaria" class="modal hidden">
         <div class="modal-content" style="max-width: 500px; padding: 2rem;">
           <h3>Registrar Nueva Secretaría</h3>
@@ -230,8 +297,10 @@
       </div>
     </div>
   </div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
   <script src="js/api.js"></script>
   <script src="js/admin.js"></script>
+  <script src="js/informes.js"></script>
   <script src="js/accessibility.js"></script>
 </body>
 </html>
