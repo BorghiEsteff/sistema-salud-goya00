@@ -50,8 +50,12 @@ async function cargarMisTurnos() {
     }
     data.forEach(turno => {
       const isCancelable = turno.estado === 'solicitado' || turno.estado === 'confirmado';
-      const actionHtml = isCancelable ? 
-        `<button onclick="cancelarMiTurno('${turno.id}')" style="color:var(--danger-color);background:none;border:none;cursor:pointer;font-weight:bold;margin-top:10px;">✖ Cancelar Turno</button>` : '';
+      let actionHtml = isCancelable ? 
+        `<button onclick="cancelarMiTurno('${turno.id}')" style="color:var(--danger-color);background:none;border:none;cursor:pointer;font-weight:bold;margin-top:10px; margin-right: 15px;">✖ Cancelar Turno</button>` : '';
+        
+      if (turno.estado_pago === 'pendiente') {
+        actionHtml += `<button onclick="pagarMiTurno('${turno.id}', this)" style="color:white; background:var(--primary-color); border:none; border-radius: 5px; padding: 5px 10px; cursor:pointer; font-weight:bold; margin-top:10px;">💳 Pagar con MercadoPago</button>`;
+      }
         
       container.innerHTML += `
         <div class="card" style="background:var(--surface-dark); border: 1px solid var(--border-color); padding: 15px; display: flex; flex-direction: column; justify-content: space-between;">
@@ -77,6 +81,31 @@ async function cancelarMiTurno(id) {
       await api.put(`/turnos/${id}/cancelar`, { motivo_cancelacion: motivo });
       cargarMisTurnos();
     } catch(err) { alert(err.message); }
+  }
+}
+
+async function pagarMiTurno(turnoId, btnElement) {
+  try {
+    if (btnElement) {
+      btnElement.disabled = true;
+      btnElement.innerText = 'Redirigiendo...';
+    }
+    const pref = await api.post('/pagos/preferencia', { turno_id: turnoId });
+    if (pref.init_point) {
+      window.location.href = pref.init_point;
+    } else {
+      alert('No se pudo generar el link de pago');
+      if (btnElement) {
+        btnElement.disabled = false;
+        btnElement.innerText = '💳 Pagar con MercadoPago';
+      }
+    }
+  } catch (err) {
+    alert('Error al inicializar el pago: ' + err.message);
+    if (btnElement) {
+      btnElement.disabled = false;
+      btnElement.innerText = '💳 Pagar con MercadoPago';
+    }
   }
 }
 
