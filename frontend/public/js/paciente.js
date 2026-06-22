@@ -91,8 +91,8 @@ async function pagarMiTurno(turnoId, btnElement) {
       btnElement.innerText = 'Redirigiendo...';
     }
     const pref = await api.post('/pagos/preferencia', { turno_id: turnoId });
-    if (pref.init_point) {
-      window.location.href = pref.init_point;
+    if (pref.initPoint) {
+      window.location.href = pref.initPoint;
     } else {
       alert('No se pudo generar el link de pago');
       if (btnElement) {
