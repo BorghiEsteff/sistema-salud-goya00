@@ -24,7 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
   btnMarcarTodas.addEventListener('click', async (e) => {
     e.stopPropagation();
     try {
-      await apiFetch('/api/notificaciones/marcar-todas-leidas', 'PUT');
+      await api.put('/notificaciones/marcar-todas-leidas');
       actualizarBadge();
       cargarNotificaciones();
     } catch (err) {
@@ -34,7 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   async function actualizarBadge() {
     try {
-      const res = await apiFetch('/api/notificaciones/no-leidas/count');
+      const res = await api.get('/notificaciones/no-leidas/count');
       if (res.count > 0) {
         badge.innerText = res.count;
         badge.style.display = 'inline-block';
@@ -48,7 +48,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   async function cargarNotificaciones() {
     try {
-      const notifs = await apiFetch('/api/notificaciones');
+      const notifs = await api.get('/notificaciones');
       lista.innerHTML = '';
       if (notifs.length === 0) {
         lista.innerHTML = '<p style="text-align: center; color: var(--text-secondary); font-size: 0.9rem;">No hay notificaciones</p>';
@@ -71,7 +71,7 @@ document.addEventListener('DOMContentLoaded', () => {
         item.addEventListener('click', async (e) => {
           e.stopPropagation();
           if (!n.leida) {
-            await apiFetch(`/api/notificaciones/${n.id}/leida`, 'PUT');
+            await api.put(`/notificaciones/${n.id}/leida`);
             actualizarBadge();
             n.leida = true;
             item.style.backgroundColor = 'transparent';
