@@ -20,22 +20,17 @@ function visualConfirm(titulo, mensaje) {
     const btnAceptar = document.getElementById('btn-confirmar-aceptar');
     const btnCancelar = document.getElementById('btn-confirmar-cancelar');
     
-    const newBtnAceptar = btnAceptar.cloneNode(true);
-    const newBtnCancelar = btnCancelar.cloneNode(true);
-    btnAceptar.parentNode.replaceChild(newBtnAceptar, btnAceptar);
-    btnCancelar.parentNode.replaceChild(newBtnCancelar, btnCancelar);
-    
-    modalConfirm.classList.remove('hidden');
-    
-    newBtnAceptar.onclick = () => {
+    btnAceptar.onclick = () => {
       modalConfirm.classList.add('hidden');
       resolve(true);
     };
     
-    newBtnCancelar.onclick = () => {
+    btnCancelar.onclick = () => {
       modalConfirm.classList.add('hidden');
       resolve(false);
     };
+    
+    modalConfirm.classList.remove('hidden');
   });
 }
 
@@ -56,8 +51,22 @@ document.addEventListener('DOMContentLoaded', async () => {
   const hoy = new Date().toISOString().split('T')[0];
   document.getElementById('fecha-filtro').value = hoy;
   document.getElementById('fecha-filtro').addEventListener('change', cargarAgenda);
+  
+  document.getElementById('nav-agenda').onclick = (e) => switchTab(e, 'section-agenda', cargarAgenda);
+  document.getElementById('nav-avisos').onclick = (e) => switchTab(e, 'section-avisos', cargarAvisos);
+  document.getElementById('nav-perfil').onclick = (e) => switchTab(e, 'section-perfil', cargarMiPerfil);
+
   cargarAgenda();
 });
+
+function switchTab(event, sectionId, loadDataFunc) {
+  event.preventDefault();
+  document.querySelectorAll('.main-content > section').forEach(s => s.style.display = 'none');
+  document.getElementById(sectionId).style.display = 'block';
+  document.querySelectorAll('.nav-links a').forEach(a => a.classList.remove('active'));
+  event.target.classList.add('active');
+  if (loadDataFunc) loadDataFunc();
+}
 
 async function cargarAgenda() {
   const fecha = document.getElementById('fecha-filtro').value;
@@ -320,3 +329,79 @@ form.addEventListener('submit', async (e) => {
     btnGuardar.innerText = 'Guardar Historia y Adjuntos';
   }
 });
+
+// LÓGICA DE MI PERFIL
+async function cargarMiPerfil() {
+  try {
+    const perfil = await api.get('/medicos/me');
+    document.getElementById('perfil-telefono').value = perfil.telefono || '';
+    document.getElementById('perfil-precio').value = perfil.precio_consulta || '';
+    document.getElementById('perfil-modalidad').value = perfil.modalidad_pago || 'on_site';
+  } catch(e) {
+    showGlobalError('Error al cargar perfil');
+  }
+}
+
+document.getElementById('form-perfil')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = document.getElementById('btn-guardar-perfil');
+  btn.disabled = true;
+  btn.innerText = 'Guardando...';
+  
+  try {
+    await api.put('/medicos/me', {
+      telefono: document.getElementById('perfil-telefono').value,
+      precio_consulta: document.getElementById('perfil-precio').value,
+      modalidad_pago: document.getElementById('perfil-modalidad').value
+    });
+    showGlobalError('Perfil actualizado correctamente', 'success');
+  } catch (err) {
+    showGlobalError(err.message || 'Error al guardar perfil');
+  } finally {
+    btn.disabled = false;
+    btn.innerText = 'Guardar Cambios';
+  }
+});
+
+// LÓGICA DE AVISOS
+async function cargarAvisos() {
+  try {
+    const perfil = await api.get('/medicos/me');
+    const container = document.getElementById('aviso-actual-container');
+    
+    if (perfil.ausente_desde && perfil.ausente_hasta) {
+      document.getElementById('span-aviso-desde').innerText = perfil.ausente_desde.substr(0, 10);
+      document.getElementById('span-aviso-hasta').innerText = perfil.ausente_hasta.substr(0, 10);
+      document.getElementById('span-aviso-motivo').innerText = perfil.motivo_ausencia || 'No especificado';
+      container.style.display = 'block';
+    } else {
+      container.style.display = 'none';
+    }
+  } catch(e) {
+    showGlobalError('Error al cargar avisos');
+  }
+}
+
+document.getElementById('form-avisos')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = document.getElementById('btn-guardar-aviso');
+  btn.disabled = true;
+  btn.innerText = 'Registrando...';
+  
+  try {
+    await api.post('/medicos/me/avisos', {
+      ausente_desde: document.getElementById('aviso-desde').value,
+      ausente_hasta: document.getElementById('aviso-hasta').value,
+      motivo_ausencia: document.getElementById('aviso-motivo').value
+    });
+    showGlobalError('Aviso de ausencia registrado exitosamente', 'success');
+    cargarAvisos(); // Refrescar vista
+    document.getElementById('form-avisos').reset();
+  } catch (err) {
+    showGlobalError(err.message || 'Error al registrar aviso');
+  } finally {
+    btn.disabled = false;
+    btn.innerText = 'Registrar Ausencia';
+  }
+});
+

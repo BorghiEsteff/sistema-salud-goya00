@@ -26,6 +26,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('nav-mis-turnos').onclick = (e) => switchTab(e, 'section-mis-turnos', cargarMisTurnos);
   document.getElementById('nav-historia').onclick = (e) => switchTab(e, 'section-historia', cargarHistoriaClinica);
   document.getElementById('nav-reservar').onclick = (e) => switchTab(e, 'section-reservar', inicializarReserva);
+  document.getElementById('nav-perfil').onclick = (e) => switchTab(e, 'section-perfil', cargarMiPerfil);
   
   cargarMisTurnos();
 });
@@ -157,6 +158,40 @@ async function cargarHistoriaClinica() {
     container.innerHTML = `<p style="color:var(--danger-color)">Error al cargar historias: ${err.message}</p>`;
   }
 }
+
+// Lógica de Mi Perfil
+async function cargarMiPerfil() {
+  try {
+    const perfil = await api.get('/pacientes/me');
+    document.getElementById('perfil-telefono').value = perfil.telefono || '';
+    document.getElementById('perfil-direccion').value = perfil.direccion || '';
+    document.getElementById('perfil-obrasocial').value = perfil.obra_social || '';
+  } catch (err) {
+    alert('Error al cargar perfil: ' + err.message);
+  }
+}
+
+document.getElementById('btn-guardar-perfil')?.addEventListener('click', async () => {
+  const btn = document.getElementById('btn-guardar-perfil');
+  btn.disabled = true;
+  btn.innerText = 'Guardando...';
+  
+  const payload = {
+    telefono: document.getElementById('perfil-telefono').value,
+    direccion: document.getElementById('perfil-direccion').value,
+    obra_social: document.getElementById('perfil-obrasocial').value
+  };
+  
+  try {
+    await api.put('/pacientes/me', payload);
+    alert('¡Perfil actualizado con éxito!');
+  } catch (err) {
+    alert('Error al guardar perfil: ' + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerText = 'Guardar Cambios';
+  }
+});
 
 // ==========================================
 // Módulo de Reserva de Turnos (Sprint 4)

@@ -52,10 +52,10 @@ async function getPerfil(req, res, next) {
 async function updatePerfil(req, res, next) {
   try {
     const id = req.usuario.rol === 'paciente' ? req.usuario.paciente_id : req.params.id;
-    const { telefono, direccion } = req.body;
+    const { telefono, direccion, obra_social } = req.body;
     const result = await db.query(
-      'UPDATE pacientes SET telefono = COALESCE($1, telefono), direccion = COALESCE($2, direccion) WHERE id = $3 RETURNING *',
-      [telefono, direccion, id]
+      'UPDATE pacientes SET telefono = COALESCE($1, telefono), direccion = COALESCE($2, direccion), obra_social = COALESCE($3, obra_social) WHERE id = $4 RETURNING *',
+      [telefono, direccion, obra_social, id]
     );
     res.json(result.rows[0]);
   } catch (err) { next(err); }
@@ -64,7 +64,7 @@ async function updatePerfil(req, res, next) {
 // Listado de todos los pacientes (Solo Admin y Secretaría)
 async function getAllPacientes(req, res, next) {
   try {
-    const { page, limit, nombre, apellido, dni } = req.query;
+    const { page, limit, nombre, apellido, dni, estado_cuenta } = req.query;
     
     let query = 'SELECT p.*, u.email FROM pacientes p JOIN usuarios u ON p.usuario_id = u.id WHERE 1=1';
     const params = [];
@@ -80,6 +80,10 @@ async function getAllPacientes(req, res, next) {
     if (dni) {
       params.push(`%${dni}%`);
       query += ` AND p.dni ILIKE $${params.length}`;
+    }
+    if (estado_cuenta) {
+      params.push(estado_cuenta);
+      query += ` AND p.estado_cuenta = $${params.length}`;
     }
 
     query += ' ORDER BY p.activo DESC, p.apellido ASC';

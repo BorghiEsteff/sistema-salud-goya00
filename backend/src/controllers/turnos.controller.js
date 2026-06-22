@@ -16,6 +16,15 @@ async function getDisponibilidad(req, res, next) {
       '14:00:00', '14:30:00', '15:00:00', '15:30:00'
     ];
 
+    // Verificar si el médico está ausente ese día
+    const medRes = await db.query(`
+      SELECT id FROM medicos 
+      WHERE id = $1 AND $2::DATE >= ausente_desde AND $2::DATE <= ausente_hasta
+    `, [medico_id, fecha]);
+    if (medRes.rows.length > 0) {
+      return res.json({ disponibles: [] }); // No hay turnos si está ausente
+    }
+
     const result = await db.query(`
       SELECT hora_inicio FROM turnos 
       WHERE medico_id = $1 AND fecha_turno = $2 AND estado NOT IN ('cancelado', 'ausente') AND activo = TRUE

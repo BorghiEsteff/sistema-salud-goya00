@@ -43,7 +43,12 @@ async function getMedicos(req, res, next) {
   try {
     const { especialidad_id, activo, nombre, page, limit } = req.query;
     let query = `
-      SELECT m.id, m.nombre, m.apellido, m.matricula, m.telefono, m.activo, m.precio_consulta, m.modalidad_pago, e.nombre as especialidad, u.email
+      SELECT m.id, m.nombre, m.apellido, m.matricula, m.telefono, m.activo, m.precio_consulta, m.modalidad_pago, 
+             e.nombre as especialidad, u.email,
+             CASE 
+               WHEN CURRENT_DATE >= m.ausente_desde AND CURRENT_DATE <= m.ausente_hasta THEN 'ausente' 
+               ELSE 'activo' 
+             END AS estado_disponibilidad
       FROM medicos m
       JOIN usuarios u ON m.usuario_id = u.id
       LEFT JOIN especialidades e ON m.especialidad_id = e.id

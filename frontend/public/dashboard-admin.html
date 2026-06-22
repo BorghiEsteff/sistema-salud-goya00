@@ -15,7 +15,8 @@
         <li><a href="#" class="active" id="nav-especialidades">💊 Especialidades</a></li>
         <li><a href="#" id="nav-medicos">👨‍⚕️ Médicos</a></li>
         <li><a href="#" id="nav-secretarias">👩‍💻 Secretarías</a></li>
-        <li><a href="#" id="nav-pacientes">🧑‍🤝‍🧑 Pacientes / Suspensiones</a></li>
+        <li><a href="#" id="nav-pacientes">🧑‍🤝‍🧑 Pacientes</a></li>
+        <li><a href="#" id="nav-suspensiones">🚫 Suspensiones</a></li>
         <li><a href="#" id="nav-informes">📊 Informes</a></li>
         <li><a href="#" id="nav-auditoria">📋 Logs de Auditoría</a></li>
       </ul>
@@ -144,6 +145,33 @@
         </div>
         <div id="paginacion-pacientes" class="pagination-controls" style="display:flex; justify-content:center; gap:10px; margin-top:15px; padding-bottom:15px;"></div>
       </section>
+
+      <!-- Section: Suspensiones -->
+      <section id="section-suspensiones" class="card" style="display: none;">
+        <div class="card-header">
+          <h3>Gestión de Suspensiones</h3>
+          <div style="display: flex; gap: 10px; align-items: center;">
+            <input type="text" id="filtro-susp-dni" class="form-control" placeholder="DNI..." style="width: 120px;">
+            <button class="btn btn-secondary" id="btn-filtrar-susp">Buscar</button>
+            <button class="btn" id="btn-limpiar-susp" style="background:none; border:1px solid rgba(255,255,255,0.2); color:#fff;">Limpiar</button>
+          </div>
+        </div>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>DNI</th>
+                <th>Nombre</th>
+                <th>Suspendido Hasta</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="tabla-suspensiones"></tbody>
+          </table>
+        </div>
+        <div id="paginacion-suspensiones" class="pagination-controls" style="display:flex; justify-content:center; gap:10px; margin-top:15px; padding-bottom:15px;"></div>
+      </section>
+
       <!-- Section: Auditoria -->
       <section id="section-auditoria" class="card" style="display: none;">
         <div class="card-header">

@@ -30,7 +30,11 @@ router.get('/medicos', async (req, res, next) => {
   try {
     const { especialidad_id } = req.query;
     let query = `
-      SELECT m.id, m.nombre, m.apellido, e.nombre as especialidad_nombre
+      SELECT m.id, m.nombre, m.apellido, e.nombre as especialidad_nombre,
+             CASE 
+               WHEN CURRENT_DATE >= m.ausente_desde AND CURRENT_DATE <= m.ausente_hasta THEN 'ausente' 
+               ELSE 'activo' 
+             END AS estado_disponibilidad
       FROM medicos m
       JOIN especialidades e ON m.especialidad_id = e.id
       WHERE m.activo = TRUE

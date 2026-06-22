@@ -11,6 +11,8 @@
       <h2>🏥 Salud Goya</h2>
       <ul class="nav-links">
         <li><a href="#" class="active" id="nav-agenda">📅 Mi Agenda</a></li>
+        <li><a href="#" id="nav-avisos">📢 Avisos</a></li>
+        <li><a href="#" id="nav-perfil">👤 Mi Perfil</a></li>
       </ul>
       <button class="logout-btn" onclick="window.logout()">Cerrar Sesión</button>
     </aside>
@@ -53,6 +55,69 @@
             </thead>
             <tbody id="tabla-agenda"></tbody>
           </table>
+        </div>
+      </section>
+
+      <!-- Nueva sección Mi Perfil -->
+      <section id="section-perfil" class="card" style="display: none;">
+        <div class="card-header">
+          <h3>Mi Perfil</h3>
+        </div>
+        <div style="margin-top: 1.5rem; max-width: 500px;">
+          <form id="form-perfil" onsubmit="event.preventDefault();">
+            <div class="form-group">
+              <label for="perfil-telefono">Teléfono</label>
+              <input type="text" id="perfil-telefono" class="form-control">
+            </div>
+            <div class="form-group" style="margin-top: 1rem;">
+              <label for="perfil-precio">Precio de Consulta ($)</label>
+              <input type="number" id="perfil-precio" class="form-control" step="0.01" min="0">
+            </div>
+            <div class="form-group" style="margin-top: 1rem;">
+              <label for="perfil-modalidad">Modalidad de Pago Preferida</label>
+              <select id="perfil-modalidad" class="form-control">
+                <option value="on_site">En el consultorio</option>
+                <option value="prepaid">Pago previo (MercadoPago)</option>
+              </select>
+            </div>
+            <button class="btn btn-primary btn-block" id="btn-guardar-perfil" style="margin-top: 1.5rem;">Guardar Cambios</button>
+          </form>
+        </div>
+      </section>
+
+      <!-- Nueva sección Avisos/Ausencias -->
+      <section id="section-avisos" class="card" style="display: none;">
+        <div class="card-header">
+          <h3>Avisos de Ausencia</h3>
+        </div>
+        <p style="color: var(--text-secondary); margin-top: 10px;">Si necesitas ausentarte por vacaciones, enfermedad u otro motivo, indícalo aquí. <strong>El sistema no permitirá que te agenden turnos en ese período.</strong> No podrás registrar ausencia si ya tienes turnos reservados en esa fecha.</p>
+        <div style="margin-top: 1.5rem; max-width: 600px;">
+          <form id="form-avisos" onsubmit="event.preventDefault();">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+              <div class="form-group">
+                <label for="aviso-desde">Ausente Desde (Inclusive)</label>
+                <input type="date" id="aviso-desde" class="form-control" required>
+              </div>
+              <div class="form-group">
+                <label for="aviso-hasta">Ausente Hasta (Inclusive)</label>
+                <input type="date" id="aviso-hasta" class="form-control" required>
+              </div>
+            </div>
+            <div class="form-group" style="margin-top: 1rem;">
+              <label for="aviso-motivo">Motivo de Ausencia</label>
+              <textarea id="aviso-motivo" class="form-control" rows="3" required placeholder="Ej: Vacaciones anuales"></textarea>
+            </div>
+            <button class="btn btn-primary btn-block" id="btn-guardar-aviso" style="margin-top: 1.5rem;">Registrar Ausencia</button>
+          </form>
+          
+          <div id="aviso-actual-container" style="margin-top: 2rem; display: none;">
+            <h4>Ausencia Registrada Actualmente</h4>
+            <div class="alert error" style="margin-top: 10px;">
+              <strong>Desde:</strong> <span id="span-aviso-desde"></span> <br>
+              <strong>Hasta:</strong> <span id="span-aviso-hasta"></span> <br>
+              <strong>Motivo:</strong> <span id="span-aviso-motivo"></span>
+            </div>
+          </div>
         </div>
       </section>
     </main>

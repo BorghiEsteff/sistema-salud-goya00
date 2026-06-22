@@ -15,6 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
   };
   document.getElementById('nav-secretarias').onclick = (e) => switchTab(e, 'section-secretarias', cargarSecretarias);
   document.getElementById('nav-pacientes').onclick = (e) => switchTab(e, 'section-pacientes', cargarPacientes);
+  document.getElementById('nav-suspensiones').onclick = (e) => switchTab(e, 'section-suspensiones', cargarSuspensiones);
   document.getElementById('nav-auditoria').onclick = (e) => switchTab(e, 'section-auditoria', cargarAuditoria);
 });
 
@@ -280,9 +281,62 @@ if (document.getElementById('btn-filtrar-pacientes')) {
   });
 }
 
-async function levantarSuspension(id) {
+let pageSuspensiones = 1;
+async function cargarSuspensiones(page = 1) {
+  if (typeof page !== 'number') page = 1;
+  pageSuspensiones = page;
+  
+  const tbody = document.getElementById('tabla-suspensiones');
+  const filtroDni = document.getElementById('filtro-susp-dni') ? document.getElementById('filtro-susp-dni').value : '';
+  
+  let url = `/pacientes?page=${page}&limit=10&estado_cuenta=suspendido`;
+  if (filtroDni) url += `&dni=${encodeURIComponent(filtroDni)}`;
+  
+  tbody.innerHTML = '<tr><td colspan="4"><div class="spinner"></div> Cargando...</td></tr>';
+  try {
+    const res = await api.get(url);
+    const data = res.data || res;
+    tbody.innerHTML = '';
+    
+    if (data.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="4">No hay pacientes suspendidos.</td></tr>';
+      return;
+    }
+    
+    data.forEach(pac => {
+      const hastaDate = pac.suspension_hasta ? new Date(pac.suspension_hasta).toLocaleDateString('es-AR') : 'Indefinida';
+      
+      let actionsHtml = `<button onclick="levantarSuspension('${pac.id}', true)" style="color:var(--secondary-color);background:none;border:none;cursor:pointer;font-weight:bold;">Levantar Suspensión</button>`;
+
+      tbody.innerHTML += `
+        <tr>
+          <td>${pac.dni}</td>
+          <td>${pac.nombre} ${pac.apellido}</td>
+          <td>${hastaDate}</td>
+          <td>${actionsHtml}</td>
+        </tr>
+      `;
+    });
+    if (res.pages) renderPaginacion('paginacion-suspensiones', res.page, res.pages, cargarSuspensiones);
+    else document.getElementById('paginacion-suspensiones').innerHTML = '';
+  } catch (err) { alert(err.message); }
+}
+
+if (document.getElementById('btn-filtrar-susp')) {
+  document.getElementById('btn-filtrar-susp').addEventListener('click', () => cargarSuspensiones(1));
+  document.getElementById('btn-limpiar-susp').addEventListener('click', () => {
+    document.getElementById('filtro-susp-dni').value = '';
+    cargarSuspensiones(1);
+  });
+}
+
+async function levantarSuspension(id, fromSuspensiones = false) {
   if(confirm('¿Levantar suspensión de este paciente?')) {
-    try { await api.put(`/admin/pacientes/${id}/levantar-suspension`); cargarPacientes(pagePacientes); } 
+    try { 
+      await api.put(`/admin/pacientes/${id}/levantar-suspension`); 
+      if (fromSuspensiones) cargarSuspensiones(pageSuspensiones);
+      else cargarPacientes(pagePacientes); 
+    } 
     catch(err) { alert(err.message); }
   }
 }
