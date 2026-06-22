@@ -458,13 +458,30 @@ Se realizó una actualización masiva (Sprints de Refactorización Interna) enfo
 
 ---
 
-### Sprint 18 — Refinamientos de UX y Reglas de Negocio (Estabilización Final)
-Se culminó la implementación de mejoras enfocadas en la usabilidad final y reglas de negocio de negocio críticas:
-- **Filtros Avanzados (Admin)**: Se incorporó la posibilidad de filtrar médicos no sólo por nombre, sino también por especialidad (dropdown dinámico) conectando con el backend.
-- **Autocompletado de Reservas (Paciente)**: Los combos de selección de Especialidad y Médico fueron reemplazados por componentes `datalist` (combobox nativo HTML5), permitiendo una búsqueda rápida (typeahead) en listados extensos sin depender de librerías de terceros.
-- **Bloqueo de Doble Reserva (Regla Crítica)**: Se introdujo validación estricta (`HTTP 409 Conflict`) en la capa de persistencia para impedir que un mismo paciente tenga turnos solapados simultáneamente en la misma fecha y hora exacta, protegiendo la coherencia temporal.
+### Sprint 18 — Refinamientos de UX y Autogestión (Estabilización)
+Se culminó la implementación de mejoras enfocadas en la usabilidad final y la descentralización de tareas:
+- **Filtros Avanzados (Admin)**: Se incorporó un menú desplegable (`select`) dinámico en el Dashboard Administrativo para filtrar a los médicos por su especialidad, trabajando en conjunto con la búsqueda por nombre.
+- **Autocompletado de Reservas (Paciente)**: Los combos estáticos de selección de Especialidad y Médico fueron reemplazados por componentes `<datalist>` nativos (combobox HTML5), permitiendo búsqueda rápida por tipeo (typeahead) sin añadir dependencias externas, garantizando el rendimiento mobile.
 - **Autogestión de Perfiles**: 
-  - *Paciente*: Se agregó la pantalla "Mi Perfil" en el dashboard, donde pueden actualizar número de teléfono y obra social en tiempo real.
-  - *Médico*: Se incluyó una pantalla idéntica para permitir la configuración autónoma del número de teléfono, modalidad de pago y precio de consulta sin depender de la Administración.
-- **Avisos de Ausencia Programada**: En lugar de la tabla de turnos vacíos, se ampliaron las columnas `ausente_desde` y `ausente_hasta` sobre la tabla de `medicos`. Permitiendo al profesional marcar su inasistencia por vacaciones/enfermedad bloqueando reservas futuras de forma nativa.
-- **Separación de Vistas Administrativas**: "Pacientes" y "Suspensiones" fueron divididas en pestañas separadas en el panel administrativo, simplificando la moderación manual de cuentas baneadas por acumular inasistencias.
+  - *Paciente*: Se agregó la pantalla "Mi Perfil", permitiendo actualizar teléfono y obra social en tiempo real.
+  - *Médico*: Se habilitó un panel de configuración propio para actualizar el teléfono de contacto, el modelo de atención (presencial/prepago) y el valor de los honorarios (precio consulta), sin fricción administrativa.
+- **Ausencias Programadas**: Se expandió el modelo de datos de la tabla `medicos` incorporando las columnas `ausente_desde`, `ausente_hasta` y `motivo_ausencia`. Ahora los médicos pueden marcar sus vacaciones o licencias, bloqueando automáticamente su disponibilidad en la agenda pública para ese rango de fechas.
+
+---
+
+### Sprint 19 — Sistema de Moderación y Reglas de Negocio en Reservas
+Se desarrolló un ecosistema estricto de validaciones a nivel de Base de Datos y Backend para asegurar la integridad de la agenda médica y el cumplimiento de las políticas de asistencia.
+
+#### 1. Prevención de Reservas Múltiples (Solapamiento)
+Se implementó una validación crítica (`HTTP 409 Conflict`) en el endpoint de reservas (`POST /api/turnos`).
+- **Regla:** El sistema escanea la base de datos para impedir que un mismo paciente logre agendar dos o más turnos distintos que compartan exactamente la misma fecha y hora de inicio, bloqueando de raíz el acaparamiento de turnos.
+
+#### 2. Gestión Avanzada de Suspensiones (Sanciones)
+El mecanismo de suspensiones, originalmente puramente automático, fue escalado hacia un sistema manual/híbrido:
+- **Moderación Manual:** Se incorporaron botones de acción tanto para Administradores (en la pestaña dedicada de 'Suspensiones' del Dashboard) como para los Médicos (desde el modal de Visor de Historial Clínico de cada paciente). Ahora el personal puede aplicar sanciones temporales o perdonar (levantar) suspensiones manualmente a discreción.
+- **Bloqueo Inteligente de Interfaz:** Si el estado de cuenta del paciente es evaluado como `suspendido` durante su inicio de sesión, el frontend oculta por completo la pestaña de "Reservar Turno" y muestra un cartel disuasorio informando la fecha de finalización de su sanción.
+- **Manejo Correcto de Errores (Fix UX):** En caso de que un paciente suspendido logre enviar un payload de reserva maliciosamente (bypass), el Backend ahora responde con un código `HTTP 400 Bad Request` controlado en lugar de un `403 Forbidden`. Esto soluciona un error heredado donde interceptar un 403 expulsaba al usuario del sistema (cierre forzado de sesión), manteniéndolo logueado pero informándole del bloqueo.
+
+#### 3. Notificaciones Asíncronas Mejoradas
+El módulo de notificaciones descrito en la sección 6.3 se perfeccionó consolidando el patrón de concurrencia **"Fire-and-Forget"**.
+- La creación del registro en PostgreSQL es síncrona y bloqueante para evitar desincronizaciones de estado, pero la interacción con los servidores SMTP de Google se ejecuta de fondo a través de promesas huérfanas (`enviarEmailNotificacion(id).catch(...)`), lo que redujo el tiempo de respuesta de los endpoints críticos (como reservar turno o suspender paciente) de ~1500ms a **< 50ms**.
