@@ -405,3 +405,26 @@ document.getElementById('form-avisos')?.addEventListener('submit', async (e) => 
   }
 });
 
+document.getElementById('btn-cancelar-aviso')?.addEventListener('click', async () => {
+  const confirmado = await visualConfirm(
+    'Cancelar Ausencia', 
+    '¿Estás seguro de que deseas cancelar tu aviso de ausencia actual? Tu agenda volverá a estar disponible para recibir turnos.'
+  );
+  
+  if (confirmado) {
+    const btn = document.getElementById('btn-cancelar-aviso');
+    btn.disabled = true;
+    btn.innerText = 'Cancelando...';
+    
+    try {
+      await api.delete('/medicos/me/avisos');
+      showGlobalError('Ausencia cancelada correctamente.', 'success');
+      cargarAvisos(); // Refrescar vista
+    } catch (err) {
+      showGlobalError(err.message || 'Error al cancelar ausencia');
+      btn.disabled = false;
+      btn.innerText = '✖ Cancelar Ausencia';
+    }
+  }
+});
+

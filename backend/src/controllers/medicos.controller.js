@@ -102,4 +102,22 @@ async function registrarAviso(req, res, next) {
   } catch (err) { next(err); }
 }
 
-module.exports = { getPerfil, getMiAgenda, updatePerfil, registrarAviso };
+// Cancelar Aviso de Ausencia
+async function cancelarAviso(req, res, next) {
+  try {
+    const medico_id = req.usuario.medico_id;
+    
+    const result = await db.query(`
+      UPDATE medicos 
+      SET 
+        ausente_desde = NULL,
+        ausente_hasta = NULL,
+        motivo_ausencia = NULL
+      WHERE id = $1 RETURNING *
+    `, [medico_id]);
+
+    res.json(result.rows[0]);
+  } catch (err) { next(err); }
+}
+
+module.exports = { getPerfil, getMiAgenda, updatePerfil, registrarAviso, cancelarAviso };

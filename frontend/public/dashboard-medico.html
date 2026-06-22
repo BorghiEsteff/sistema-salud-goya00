@@ -112,10 +112,13 @@
           
           <div id="aviso-actual-container" style="margin-top: 2rem; display: none;">
             <h4>Ausencia Registrada Actualmente</h4>
-            <div class="alert error" style="margin-top: 10px;">
-              <strong>Desde:</strong> <span id="span-aviso-desde"></span> <br>
-              <strong>Hasta:</strong> <span id="span-aviso-hasta"></span> <br>
-              <strong>Motivo:</strong> <span id="span-aviso-motivo"></span>
+            <div class="alert error" style="margin-top: 10px; display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <strong>Desde:</strong> <span id="span-aviso-desde"></span> <br>
+                <strong>Hasta:</strong> <span id="span-aviso-hasta"></span> <br>
+                <strong>Motivo:</strong> <span id="span-aviso-motivo"></span>
+              </div>
+              <button class="btn btn-danger" id="btn-cancelar-aviso" style="background: var(--danger-color); color: white; border: none;">✖ Cancelar Ausencia</button>
             </div>
           </div>
         </div>
