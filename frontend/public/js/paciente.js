@@ -203,76 +203,97 @@ let medicosCache = [];
 let horaSeleccionada = null;
 
 async function inicializarReserva() {
-  document.getElementById('reserva-especialidad').innerHTML = '<option value="">Cargando especialidades...</option>';
+  document.getElementById('reserva-especialidad').value = '';
+  document.getElementById('reserva-medico').value = '';
+  document.getElementById('reserva-medico').disabled = true;
+  document.getElementById('dl-especialidades').innerHTML = '';
   document.getElementById('grilla-especialidades').innerHTML = '';
   try {
     const especialidades = await api.get('/public/especialidades?solo_con_medicos=true');
-    let html = '<option value="">Seleccione especialidad</option>';
+    let html = '';
     let grillaHtml = '';
     especialidades.forEach(e => {
-      html += `<option value="${e.id}">${e.nombre}</option>`;
-      grillaHtml += `<button type="button" class="btn btn-secondary btn-especialidad" data-id="${e.id}" onclick="seleccionarEspecialidad('${e.id}')">${e.nombre}</button>`;
+      // Usamos el nombre como value para que lo vea el usuario. Luego buscamos el ID.
+      html += `<option value="${e.nombre}" data-id="${e.id}"></option>`;
+      grillaHtml += `<button type="button" class="btn btn-secondary btn-especialidad" data-id="${e.id}" data-nombre="${e.nombre}" onclick="seleccionarEspecialidad('${e.id}', '${e.nombre}')">${e.nombre}</button>`;
     });
-    document.getElementById('reserva-especialidad').innerHTML = html;
+    document.getElementById('dl-especialidades').innerHTML = html;
     document.getElementById('grilla-especialidades').innerHTML = grillaHtml;
   } catch(err) {
-    document.getElementById('reserva-especialidad').innerHTML = '<option value="">Error al cargar</option>';
     alert('Error cargando especialidades: ' + err.message);
   }
 }
 
-window.seleccionarEspecialidad = function(id) {
-  const select = document.getElementById('reserva-especialidad');
-  select.value = id;
-  select.dispatchEvent(new Event('change'));
+window.seleccionarEspecialidad = function(id, nombre) {
+  const input = document.getElementById('reserva-especialidad');
+  input.value = nombre;
+  input.dataset.id = id;
+  input.dispatchEvent(new Event('change'));
   document.querySelectorAll('.btn-especialidad').forEach(b => b.style.background = 'rgba(255, 255, 255, 0.05)');
   document.querySelector(`.btn-especialidad[data-id="${id}"]`).style.background = 'var(--primary-color)';
 };
 
 document.getElementById('reserva-especialidad').addEventListener('change', async (e) => {
-  const espId = e.target.value;
+  const inputEsp = e.target;
+  let espId = inputEsp.dataset.id;
+  
+  // Si el usuario tipeo y eligio del datalist, tenemos que buscar el data-id de esa opcion
+  if (!espId) {
+    const val = inputEsp.value;
+    const opciones = document.querySelectorAll('#dl-especialidades option');
+    for (let opt of opciones) {
+      if (opt.value === val) { espId = opt.dataset.id; inputEsp.dataset.id = espId; break; }
+    }
+  }
+
   const comboMedico = document.getElementById('reserva-medico');
   const inputFecha = document.getElementById('reserva-fecha');
   const btnBuscar = document.getElementById('btn-buscar-turnos');
   
   comboMedico.disabled = true;
+  comboMedico.value = '';
+  comboMedico.dataset.id = '';
   inputFecha.disabled = true;
   btnBuscar.disabled = true;
   document.getElementById('contenedor-horarios').style.display = 'none';
   
   if(!espId) {
-    comboMedico.innerHTML = '<option value="">Primero elija especialidad</option>';
+    comboMedico.placeholder = 'Primero elija especialidad';
     return;
   }
   
-  comboMedico.innerHTML = '<option value="">Cargando médicos...</option>';
+  comboMedico.placeholder = 'Buscando médicos...';
+  document.getElementById('dl-medicos').innerHTML = '';
   document.getElementById('grilla-medicos').innerHTML = '';
   try {
     medicosCache = await api.get(`/public/medicos?especialidad_id=${espId}`);
-    let html = '<option value="">Seleccione médico</option>';
+    let html = '';
     let grillaHtml = '';
     medicosCache.forEach(m => {
-      html += `<option value="${m.id}">${m.nombre} ${m.apellido}</option>`;
+      const nombreCompleto = `Dr/a. ${m.nombre} ${m.apellido}`;
+      html += `<option value="${nombreCompleto}" data-id="${m.id}"></option>`;
       grillaHtml += `
-        <div class="card btn-medico" data-id="${m.id}" onclick="seleccionarMedico('${m.id}')" style="cursor: pointer; padding: 15px; width: 200px; text-align: center; border: 2px solid transparent; transition: all 0.2s; background: var(--surface-dark);">
+        <div class="card btn-medico" data-id="${m.id}" data-nombre="${nombreCompleto}" onclick="seleccionarMedico('${m.id}', '${nombreCompleto}')" style="cursor: pointer; padding: 15px; width: 200px; text-align: center; border: 2px solid transparent; transition: all 0.2s; background: var(--surface-dark);">
           <div style="font-size: 3rem; margin-bottom: 10px;">👨‍⚕️</div>
-          <strong style="color:var(--text-primary); display:block; margin-bottom:5px;">Dr/a. ${m.nombre} ${m.apellido}</strong>
+          <strong style="color:var(--text-primary); display:block; margin-bottom:5px;">${nombreCompleto}</strong>
           <small style="color:var(--text-secondary);">Mat: ${m.matricula}</small>
         </div>
       `;
     });
-    comboMedico.innerHTML = html;
+    document.getElementById('dl-medicos').innerHTML = html;
     document.getElementById('grilla-medicos').innerHTML = grillaHtml;
     comboMedico.disabled = false;
+    comboMedico.placeholder = 'Escriba para buscar médico...';
   } catch(err) {
-    comboMedico.innerHTML = '<option value="">Error al cargar</option>';
+    comboMedico.placeholder = 'Error al cargar';
   }
 });
 
-window.seleccionarMedico = function(id) {
-  const select = document.getElementById('reserva-medico');
-  select.value = id;
-  select.dispatchEvent(new Event('change'));
+window.seleccionarMedico = function(id, nombreCompleto) {
+  const input = document.getElementById('reserva-medico');
+  input.value = nombreCompleto;
+  input.dataset.id = id;
+  input.dispatchEvent(new Event('change'));
   document.querySelectorAll('.btn-medico').forEach(b => {
       b.style.borderColor = 'transparent';
       b.style.background = 'var(--surface-dark)';
@@ -285,8 +306,19 @@ window.seleccionarMedico = function(id) {
 };
 
 document.getElementById('reserva-medico').addEventListener('change', (e) => {
+  const inputMed = e.target;
+  let medId = inputMed.dataset.id;
+  
+  if (!medId) {
+    const val = inputMed.value;
+    const opciones = document.querySelectorAll('#dl-medicos option');
+    for (let opt of opciones) {
+      if (opt.value === val) { medId = opt.dataset.id; inputMed.dataset.id = medId; break; }
+    }
+  }
+
   const inputFecha = document.getElementById('reserva-fecha');
-  if(e.target.value) {
+  if(medId) {
     inputFecha.disabled = false;
     // Poner fecha mínima hoy
     const hoy = new Date().toISOString().split('T')[0];
@@ -304,7 +336,7 @@ document.getElementById('reserva-fecha').addEventListener('change', (e) => {
 });
 
 document.getElementById('btn-buscar-turnos').addEventListener('click', async () => {
-  const medicoId = document.getElementById('reserva-medico').value;
+  const medicoId = document.getElementById('reserva-medico').dataset.id;
   const fecha = document.getElementById('reserva-fecha').value;
   const grilla = document.getElementById('grilla-horarios');
   const btn = document.getElementById('btn-buscar-turnos');
@@ -360,8 +392,8 @@ document.getElementById('btn-confirmar-reserva').addEventListener('click', async
   
   const payload = {
     paciente_id: user.paciente_id,
-    medico_id: document.getElementById('reserva-medico').value,
-    especialidad_id: document.getElementById('reserva-especialidad').value,
+    medico_id: document.getElementById('reserva-medico').dataset.id,
+    especialidad_id: document.getElementById('reserva-especialidad').dataset.id,
     fecha_turno: document.getElementById('reserva-fecha').value,
     hora_inicio: horaSeleccionada,
     motivo_consulta: document.getElementById('reserva-motivo').value

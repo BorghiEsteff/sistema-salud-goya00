@@ -127,9 +127,11 @@ async function cargarMedicos(page = 1) {
   
   const tbody = document.getElementById('tabla-medicos');
   const filtroNombre = document.getElementById('filtro-medico-nombre') ? document.getElementById('filtro-medico-nombre').value : '';
+  const filtroEsp = document.getElementById('filtro-medico-especialidad') ? document.getElementById('filtro-medico-especialidad').value : '';
   
   let url = `/admin/medicos?page=${page}&limit=10`;
   if (filtroNombre) url += `&nombre=${encodeURIComponent(filtroNombre)}`;
+  if (filtroEsp) url += `&especialidad_id=${encodeURIComponent(filtroEsp)}`;
   
   tbody.innerHTML = '<tr><td colspan="6"><div class="spinner"></div> Cargando...</td></tr>';
   try {
@@ -427,8 +429,15 @@ async function cargarSelectEspecialidades() {
   try {
     const data = await api.get('/admin/especialidades');
     const select = document.getElementById('med-especialidad');
-    select.innerHTML = '<option value="">Seleccione...</option>';
-    data.forEach(e => select.innerHTML += `<option value="${e.id}">${e.nombre}</option>`);
+    const filtroSelect = document.getElementById('filtro-medico-especialidad');
+    
+    if (select) select.innerHTML = '<option value="">Seleccione...</option>';
+    if (filtroSelect) filtroSelect.innerHTML = '<option value="">Todas las especialidades</option>';
+    
+    data.forEach(e => {
+      if (select) select.innerHTML += `<option value="${e.id}">${e.nombre}</option>`;
+      if (filtroSelect) filtroSelect.innerHTML += `<option value="${e.id}">${e.nombre}</option>`;
+    });
   } catch(err) {}
 }
 

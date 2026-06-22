@@ -455,3 +455,16 @@ Se realizó una actualización masiva (Sprints de Refactorización Interna) enfo
 - **Auditoría e Informes**: Paginación optimizada para listados masivos e implementación de la exportación a CSV del log de auditoría completo sin dependencia de la paginación activa. Informes KPI del admin computados directamente vía agregación en PostgreSQL.
 
 **Archivos modificados:** `styles.css`, `dashboard-paciente.html`, `dashboard-admin.html`, `dashboard-medico.html`, `dashboard-secretaria.html`, `index.html`, `portal.html`, `paciente.js`, `admin.js`, `notificaciones.service.js`.
+
+---
+
+### Sprint 18 — Refinamientos de UX y Reglas de Negocio (Estabilización Final)
+Se culminó la implementación de mejoras enfocadas en la usabilidad final y reglas de negocio de negocio críticas:
+- **Filtros Avanzados (Admin)**: Se incorporó la posibilidad de filtrar médicos no sólo por nombre, sino también por especialidad (dropdown dinámico) conectando con el backend.
+- **Autocompletado de Reservas (Paciente)**: Los combos de selección de Especialidad y Médico fueron reemplazados por componentes `datalist` (combobox nativo HTML5), permitiendo una búsqueda rápida (typeahead) en listados extensos sin depender de librerías de terceros.
+- **Bloqueo de Doble Reserva (Regla Crítica)**: Se introdujo validación estricta (`HTTP 409 Conflict`) en la capa de persistencia para impedir que un mismo paciente tenga turnos solapados simultáneamente en la misma fecha y hora exacta, protegiendo la coherencia temporal.
+- **Autogestión de Perfiles**: 
+  - *Paciente*: Se agregó la pantalla "Mi Perfil" en el dashboard, donde pueden actualizar número de teléfono y obra social en tiempo real.
+  - *Médico*: Se incluyó una pantalla idéntica para permitir la configuración autónoma del número de teléfono, modalidad de pago y precio de consulta sin depender de la Administración.
+- **Avisos de Ausencia Programada**: En lugar de la tabla de turnos vacíos, se ampliaron las columnas `ausente_desde` y `ausente_hasta` sobre la tabla de `medicos`. Permitiendo al profesional marcar su inasistencia por vacaciones/enfermedad bloqueando reservas futuras de forma nativa.
+- **Separación de Vistas Administrativas**: "Pacientes" y "Suspensiones" fueron divididas en pestañas separadas en el panel administrativo, simplificando la moderación manual de cuentas baneadas por acumular inasistencias.

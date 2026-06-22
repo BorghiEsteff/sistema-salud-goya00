@@ -76,6 +76,9 @@
           <h3>Gestión de Médicos</h3>
           <div style="display: flex; gap: 10px; align-items: center;">
             <input type="text" id="filtro-medico-nombre" class="form-control" placeholder="Buscar por nombre o apellido..." style="width: 250px;">
+            <select id="filtro-medico-especialidad" class="form-control" style="width: 200px;">
+              <option value="">Todas las especialidades</option>
+            </select>
             <button class="btn btn-secondary" id="btn-filtrar-medicos">Buscar</button>
             <button class="btn btn-primary" onclick="document.getElementById('modal-medico').classList.remove('hidden')">➕ Nuevo Médico</button>
           </div>

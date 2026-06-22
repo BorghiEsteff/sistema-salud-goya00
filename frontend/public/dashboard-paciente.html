@@ -70,18 +70,16 @@
         <div style="margin-top: 1.5rem; max-width: 600px;">
           <form id="form-reserva" onsubmit="event.preventDefault();">
             <div class="form-group">
-              <label>1. Seleccionar Especialidad</label>
-              <select id="reserva-especialidad" class="form-control" style="display: none;">
-                <option value="">Cargando especialidades...</option>
-              </select>
+              <label for="reserva-especialidad">1. Seleccionar Especialidad</label>
+              <input type="text" id="reserva-especialidad" list="dl-especialidades" class="form-control" placeholder="Escriba para buscar especialidad...">
+              <datalist id="dl-especialidades"></datalist>
               <div id="grilla-especialidades" style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px;"></div>
             </div>
             
             <div class="form-group" style="margin-top:1rem;">
-              <label>2. Seleccionar Médico</label>
-              <select id="reserva-medico" class="form-control" style="display: none;">
-                <option value="">Primero elija especialidad</option>
-              </select>
+              <label for="reserva-medico">2. Seleccionar Médico</label>
+              <input type="text" id="reserva-medico" list="dl-medicos" class="form-control" placeholder="Primero elija especialidad" disabled>
+              <datalist id="dl-medicos"></datalist>
               <div id="grilla-medicos" style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px;"></div>
             </div>
             

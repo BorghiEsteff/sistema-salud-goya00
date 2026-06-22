@@ -64,6 +64,17 @@ async function reservarTurno(req, res, next) {
       return res.status(400).json({ error: 'Lo sentimos, este horario acaba de ser ocupado.' });
     }
 
+    // Sprint 11: Verificación de reglas de negocio: ¿El paciente ya tiene otro turno a esa misma hora?
+    const turnoSolapado = await db.query(`
+      SELECT id FROM turnos
+      WHERE paciente_id = $1 AND fecha_turno = $2 AND hora_inicio = $3 
+      AND estado NOT IN ('cancelado') AND activo = TRUE
+    `, [paciente_id, fecha_turno, hora_inicio]);
+    
+    if (turnoSolapado.rows.length > 0) {
+      return res.status(409).json({ error: 'Ya tienes un turno reservado en ese mismo día y horario con otro médico.' });
+    }
+
     // Calcular hora fin (+30 min)
     const horaF = new Date(`1970-01-01T${hora_inicio}Z`);
     horaF.setMinutes(horaF.getMinutes() + 30);
