@@ -253,8 +253,10 @@ async function cargarPacientes(page = 1) {
       if (!isActivo) {
         actionsHtml += ` <button onclick="eliminarPacienteFisico('${pac.id}')" style="color:var(--danger-color);background:none;border:none;cursor:pointer;font-weight:bold;margin-left:10px;">Eliminar</button>`;
       }
-      if(isSuspendido && isActivo) {
-        actionsHtml += `<button onclick="levantarSuspension('${pac.id}')" style="color:var(--secondary-color);background:none;border:none;cursor:pointer;font-weight:bold;">Levantar Suspensión</button>`;
+      if (isSuspendido && isActivo) {
+        actionsHtml += `<button onclick="levantarSuspension('${pac.id}')" style="color:var(--secondary-color);background:none;border:none;cursor:pointer;font-weight:bold;margin-left:10px;">Levantar Suspensión</button>`;
+      } else if (!isSuspendido && isActivo) {
+        actionsHtml += `<button onclick="suspenderPaciente('${pac.id}')" style="color:var(--danger-color);background:none;border:none;cursor:pointer;font-weight:bold;margin-left:10px;">Suspender</button>`;
       }
 
       tbody.innerHTML += `
@@ -330,10 +332,23 @@ if (document.getElementById('btn-filtrar-susp')) {
   });
 }
 
+async function suspenderPaciente(id) {
+  const diasStr = prompt('¿Por cuántos días deseas suspender a este paciente?', '15');
+  if (diasStr === null) return;
+  const dias = parseInt(diasStr);
+  if (isNaN(dias) || dias <= 0) return alert('Por favor, ingresa un número válido de días.');
+
+  try { 
+    await api.put(`/pacientes/${id}/suspender`, { dias }); 
+    cargarPacientes(pagePacientes); 
+  } 
+  catch(err) { alert(err.message); }
+}
+
 async function levantarSuspension(id, fromSuspensiones = false) {
   if(confirm('¿Levantar suspensión de este paciente?')) {
     try { 
-      await api.put(`/admin/pacientes/${id}/levantar-suspension`); 
+      await api.put(`/pacientes/${id}/levantar-suspension`); 
       if (fromSuspensiones) cargarSuspensiones(pageSuspensiones);
       else cargarPacientes(pagePacientes); 
     } 

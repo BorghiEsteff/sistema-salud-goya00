@@ -157,9 +157,33 @@ async function abrirHistorial(pacienteId, turnoId) {
   document.getElementById('historial-contenido').innerHTML = '<div class="spinner"></div> Cargando...';
   document.getElementById('archivos-lista').innerHTML = '';
   document.getElementById('upload-pdf-input').value = '';
+  document.getElementById('hp-nombre').innerText = 'Cargando...';
+  document.getElementById('hp-estado-badge').innerText = '';
+  document.getElementById('hp-acciones').innerHTML = '';
   document.getElementById('visor-historial-modal').classList.remove('hidden');
 
   try {
+    // 0. Cargar info del paciente
+    const paciente = await api.get(`/pacientes/${pacienteId}`);
+    document.getElementById('hp-nombre').innerText = `${paciente.nombre} ${paciente.apellido} (DNI: ${paciente.dni})`;
+    
+    const badge = document.getElementById('hp-estado-badge');
+    const acciones = document.getElementById('hp-acciones');
+    
+    if (!paciente.activo) {
+      badge.innerText = 'INACTIVO';
+      badge.className = 'badge suspendido';
+      acciones.innerHTML = '<span style="color:var(--text-secondary)">Paciente eliminado</span>';
+    } else if (paciente.estado_cuenta === 'suspendido') {
+      badge.innerText = 'SUSPENDIDO';
+      badge.className = 'badge suspendido';
+      acciones.innerHTML = `<button onclick="levantarSuspensionPaciente('${paciente.id}')" class="btn" style="background:var(--secondary-color); color:#fff; border:none;">Levantar Suspensión</button>`;
+    } else {
+      badge.innerText = 'ACTIVO';
+      badge.className = 'badge activo';
+      acciones.innerHTML = `<button onclick="suspenderPaciente('${paciente.id}')" class="btn" style="background:var(--danger-color); color:#fff; border:none;">Suspender Paciente</button>`;
+    }
+
     // 1. Cargar el texto de las historias
     const historias = await api.get(`/historias/paciente/${pacienteId}`);
     let htmlHistorias = '';
@@ -184,6 +208,31 @@ async function abrirHistorial(pacienteId, turnoId) {
 
   } catch (err) {
     document.getElementById('historial-contenido').innerHTML = `<span style="color:var(--danger-color)">${err.message}</span>`;
+  }
+}
+
+async function suspenderPaciente(id) {
+  const diasStr = prompt('¿Por cuántos días deseas suspender a este paciente?', '15');
+  if (diasStr === null) return;
+  const dias = parseInt(diasStr);
+  if (isNaN(dias) || dias <= 0) return alert('Por favor, ingresa un número válido de días.');
+
+  try { 
+    await api.put(`/pacientes/${id}/suspender`, { dias }); 
+    showGlobalError('Paciente suspendido correctamente', 'success');
+    abrirHistorial(id, turnoSeleccionadoParaHistorial); // Refrescar modal
+  } 
+  catch(err) { alert(err.message); }
+}
+
+async function levantarSuspensionPaciente(id) {
+  if(confirm('¿Levantar suspensión de este paciente?')) {
+    try { 
+      await api.put(`/pacientes/${id}/levantar-suspension`); 
+      showGlobalError('Suspensión levantada correctamente', 'success');
+      abrirHistorial(id, turnoSeleccionadoParaHistorial); // Refrescar modal
+    } 
+    catch(err) { alert(err.message); }
   }
 }
 

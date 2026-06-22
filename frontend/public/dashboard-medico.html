@@ -206,6 +206,16 @@
         <span class="close-modal" onclick="document.getElementById('visor-historial-modal').classList.add('hidden')">&times;</span>
       </div>
       
+      <div id="historial-paciente-estado" style="padding: 10px; background: var(--surface-light); border-radius: 8px; margin-top: 10px; display: flex; justify-content: space-between; align-items: center;">
+         <div>
+           <strong id="hp-nombre" style="font-size: 1.1rem;">Cargando...</strong> <br>
+           <span id="hp-estado-badge" class="badge" style="margin-top: 5px; display: inline-block;"></span>
+         </div>
+         <div id="hp-acciones">
+           <!-- Botones de suspensión insertados vía JS -->
+         </div>
+      </div>
+      
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 15px;">
         <!-- Columna Izquierda: Consultas Anteriores -->
         <div>

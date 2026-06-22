@@ -26,7 +26,6 @@ router.put('/secretarias/:id/estado', adminController.toggleSecretariaStatus);
 
 // Pacientes y Suspensiones
 router.put('/pacientes/:id/estado', adminController.togglePacienteStatus);
-router.put('/pacientes/:id/levantar-suspension', adminController.levantarSuspension);
 router.delete('/pacientes/:id', adminController.deletePacienteFisico);
 
 // Auditoría

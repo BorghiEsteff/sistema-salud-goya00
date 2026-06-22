@@ -145,28 +145,6 @@ async function updateMedico(req, res, next) {
   } catch (err) { next(err); }
 }
 
-// --- SUSPENSIONES ---
-async function levantarSuspension(req, res, next) {
-  try {
-    const { id } = req.params; // ID de paciente
-    const result = await db.query(`
-      UPDATE pacientes
-      SET estado_cuenta = 'activo', inasistencias_recientes = 0, suspension_hasta = NULL
-      WHERE id = $1 RETURNING id, estado_cuenta
-    `, [id]);
-    
-    if (result.rows.length === 0) return res.status(404).json({ error: 'Paciente no encontrado' });
-    
-    // Registrar auditoría de esta acción crítica
-    await db.query(`
-      INSERT INTO logs_auditoria (tabla_afectada, registro_id, accion, campo_modificado, valor_anterior, valor_nuevo, usuario_id)
-      VALUES ('pacientes', $1, 'UPDATE', 'estado_cuenta', 'suspendido', 'activo', $2)
-    `, [id, req.usuario.id]);
-
-    res.json(result.rows[0]);
-  } catch (err) { next(err); }
-}
-
 // --- AUDITORÍA ---
 async function getAuditoria(req, res, next) {
   try {
@@ -473,6 +451,6 @@ module.exports = {
   getEspecialidades, createEspecialidad, deleteEspecialidad, limpiarEspecialidadesVacias,
   getMedicos, createMedico, updateMedico, toggleMedicoStatus,
   getSecretarias, createSecretaria, toggleSecretariaStatus,
-  togglePacienteStatus, levantarSuspension, deletePacienteFisico,
+  togglePacienteStatus, deletePacienteFisico,
   getAuditoria, exportarAuditoriaCSV
 };

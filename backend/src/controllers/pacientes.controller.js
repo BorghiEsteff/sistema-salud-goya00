@@ -108,6 +108,59 @@ async function getAllPacientes(req, res, next) {
   } catch (err) { next(err); }
 }
 
-module.exports = {
-  autoRegistro, getPerfil, updatePerfil, getAllPacientes
+// --- GESTIÓN DE SUSPENSIONES (ADMINS Y MÉDICOS) ---
+async function suspenderPaciente(req, res, next) {
+  try {
+    const { id } = req.params;
+    const dias = parseInt(req.body.dias) || 15;
+    
+    const fechaSuspension = new Date();
+    fechaSuspension.setDate(fechaSuspension.getDate() + dias);
+    
+    const result = await db.query(`
+      UPDATE pacientes
+      SET estado_cuenta = 'suspendido', suspension_hasta = $1
+      WHERE id = $2 RETURNING id, estado_cuenta, suspension_hasta
+    `, [fechaSuspension.toISOString(), id]);
+    
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Paciente no encontrado' });
+    
+    // Registrar auditoría
+    await db.query(`
+      INSERT INTO logs_auditoria (tabla_afectada, registro_id, accion, campo_modificado, valor_anterior, valor_nuevo, usuario_id)
+      VALUES ('pacientes', $1, 'UPDATE', 'estado_cuenta', 'activo', 'suspendido (manual)', $2)
+    `, [id, req.usuario.id]);
+
+    res.json(result.rows[0]);
+  } catch (err) { next(err); }
+}
+
+async function levantarSuspension(req, res, next) {
+  try {
+    const { id } = req.params;
+    const result = await db.query(`
+      UPDATE pacientes
+      SET estado_cuenta = 'activo', inasistencias_recientes = 0, suspension_hasta = NULL
+      WHERE id = $1 RETURNING id, estado_cuenta
+    `, [id]);
+    
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Paciente no encontrado' });
+    
+    // Registrar auditoría
+    await db.query(`
+      INSERT INTO logs_auditoria (tabla_afectada, registro_id, accion, campo_modificado, valor_anterior, valor_nuevo, usuario_id)
+      VALUES ('pacientes', $1, 'UPDATE', 'estado_cuenta', 'suspendido', 'activo (manual)', $2)
+    `, [id, req.usuario.id]);
+
+    res.json(result.rows[0]);
+  } catch (err) { next(err); }
+}
+
+module.exports = { 
+  autoRegistro, 
+  getPerfil, 
+  updatePerfil, 
+  getAllPacientes,
+  suspenderPaciente,
+  levantarSuspension 
 };
