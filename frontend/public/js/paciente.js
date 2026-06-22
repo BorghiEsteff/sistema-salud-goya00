@@ -17,9 +17,12 @@ document.addEventListener('DOMContentLoaded', async () => {
       msgBox.style.backgroundColor = 'var(--danger-color, #ef4444)';
       msgBox.style.color = 'white';
       msgBox.innerText = 'ATENCIÓN: Tu cuenta se encuentra INACTIVA. No tienes permisos para operar en el sistema.';
+      document.getElementById('nav-reservar').style.display = 'none';
     } else if (perfil.estado_cuenta !== 'activo') {
       msgBox.style.display = 'block';
       msgBox.innerText = `Atención: Tu cuenta está en estado ${perfil.estado_cuenta.toUpperCase()}. No podrás reservar turnos nuevos.`;
+      // Ocultar botón de reservar turno
+      document.getElementById('nav-reservar').style.display = 'none';
     }
   } catch(e) { console.error(e); }
 

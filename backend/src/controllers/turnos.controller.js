@@ -55,7 +55,7 @@ async function reservarTurno(req, res, next) {
     // Verificación de reglas de negocio: ¿Está suspendido?
     const estadoPac = await verificarPacienteSuspendido(paciente_id);
     if (estadoPac.suspendido) {
-      return res.status(403).json({ error: estadoPac.mensaje });
+      return res.status(400).json({ error: estadoPac.mensaje });
     }
 
     // Verificación de reglas de negocio: ¿Alguien le ganó de mano el turno?
