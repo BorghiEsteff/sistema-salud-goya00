@@ -83,10 +83,16 @@ async function cargarAgenda() {
       const nombreClicable = `<a href="#" onclick="abrirHistorial('${turno.paciente_id}')" style="color:var(--primary-color); font-weight:bold; text-decoration:underline;">${turno.paciente_nombre} ${turno.paciente_apellido}</a>`;
 
       let acciones = '-';
-      if (turno.estado === 'solicitado' || turno.estado === 'confirmado') {
+      if (turno.estado === 'confirmado') {
         acciones = `
           <button onclick="marcarAtendido('${turno.id}', '${turno.paciente_id}')" style="color:var(--secondary-color);background:none;border:none;cursor:pointer;font-weight:bold;margin-right:10px;">✔ Atendido</button>
           <button onclick="cambiarEstado('${turno.id}', 'ausente')" style="color:var(--danger-color);background:none;border:none;cursor:pointer;font-weight:bold;margin-right:10px;">✖ Ausente</button>
+          <button onclick="cancelarTurno('${turno.id}')" style="color:var(--text-secondary);background:none;border:none;cursor:pointer;font-weight:bold;">Cancelar</button>
+        `;
+      } else if (turno.estado === 'solicitado') {
+        acciones = `
+          <span style="font-size:0.8rem;color:var(--text-secondary);display:block;margin-bottom:5px;">Falta Pago</span>
+          <button onclick="cambiarEstado('${turno.id}', 'confirmado')" style="color:var(--success-color);background:none;border:none;cursor:pointer;font-weight:bold;margin-right:10px;">Aceptar Manualmente</button>
           <button onclick="cancelarTurno('${turno.id}')" style="color:var(--text-secondary);background:none;border:none;cursor:pointer;font-weight:bold;">Cancelar</button>
         `;
       }
