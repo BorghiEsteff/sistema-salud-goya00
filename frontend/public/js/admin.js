@@ -627,7 +627,7 @@ document.getElementById('btn-exportar-csv').addEventListener('click', () => {
   const desde = document.getElementById('filtro-auditoria-desde').value;
   const hasta = document.getElementById('filtro-auditoria-hasta').value;
 
-  const API_URL = window.ENV_API_URL || 'https://sistema-salud-goya00.onrender.com/api';
+  const API_URL = window.ENV_API_URL || 'https://sistemadeturnos01.onrender.com/api';
   let url = `${API_URL}/admin/auditoria/exportar?`;
   if (desde) url += 'fecha_desde=' + desde + '&';
   if (hasta) url += 'fecha_hasta=' + hasta;
